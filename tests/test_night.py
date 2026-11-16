@@ -60,7 +60,7 @@ def test_no_wake_is_asked_for_without_the_permission(tmp_path, monkeypatch):
 
 
 def test_a_wake_is_set_once_for_the_opening(tmp_path, monkeypatch):
-    rule = tmp_path / "bengaluru-wake"
+    rule = tmp_path / "claude-wake"
     rule.write_text("")
     monkeypatch.setattr(night, "WAKE_RULE", rule)
     run = Recorder()
