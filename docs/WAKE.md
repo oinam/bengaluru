@@ -89,21 +89,15 @@ What this Mac taught us:
 - **Lid closed is unproven**, and scheduled wakes are only dependable on AC power.
   Plugged in with the lid open is the known-good setup.
 
-None of the above has run for real yet: the permission is not installed, so no wake has
-been set through it. The first night after installing it is the test.
+Brajeshwar installed the permission on 2026-11-16, and `mise run night` set the first
+wake through it, for 23:00 that night; `pmset -g sched` listed it. Whether the Mac wakes
+and the agent runs is that night's test: read `logs/night.log` in the Bengaluru project.
 
 ## Telling every Claude Code session
 
-Not done. For every project's session to know this exists, add a short section to
-`~/.claude/CLAUDE.md`, for example:
-
-```markdown
-## Waking the Mac
-- Scheduled jobs may wake this Mac with `sudo -n /usr/bin/pmset schedule wake "MM/DD/YY HH:MM:SS"`,
-  and cancel with `schedule cancel wake`. `/etc/sudoers.d/claude-wake` allows exactly those two.
-  Never ask for, or add, any other passwordless `sudo`.
-- How to use it, and what this Mac needs: <where this note lives in the vault>.
-```
+`~/.claude/CLAUDE.md`, which every project's session reads, has a "Waking the Mac"
+section since 2026-11-16: the two commands, the rule against any other passwordless
+`sudo`, and a pointer to this file. If this note moves, change the pointer there.
 
 ## Who uses it
 
