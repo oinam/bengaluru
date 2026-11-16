@@ -132,9 +132,10 @@ byte for byte; only libvips's own timestamp in each `vips-properties.xml` differ
 Brajeshwar: read it as Bengaluru, and rename the folder, the project references, and
 the title. So everything the project is called by is `bengaluru`: the folder
 (`~/dev/bengaluru`), the Python package and its command, the folder on the external
-drive (`Scratch/bengaluru`), and the `/odo` queue and log. The site's title says
-Bengaluru; its exact wording is set when the viewer lands, and Manipur's is
-"Imphal - Isometric Map".
+drive (`Scratch/bengaluru`), and the `/odo` queue and log.
+
+The site's name and title are "Bengaluru - 3D Isometric Map", in Brajeshwar's words the
+same evening.
 
 The GitHub repository is `oinam/bengaluru` too. Place names keep their own spelling:
 Bangalore Palace and Bangalore City railway station.

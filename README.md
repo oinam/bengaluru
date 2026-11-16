@@ -1,4 +1,4 @@
-# Bengaluru isometric map
+# Bengaluru - 3D Isometric Map
 
 A zoomable, searchable isometric pixel-art map of Bengaluru, drawn by code from open
 data: OpenStreetMap, Google Open Buildings, and ESA WorldCover. No photographs, satellite
