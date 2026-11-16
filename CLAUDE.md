@@ -6,9 +6,10 @@ https://manipur.oinam.com), and it starts from that project's pipeline and lesso
 
 **Status: Phase 0, with its go/no-go open.** The pipeline is in and the test patch
 renders; Brajeshwar has yet to say whether the frame reads as Bengaluru. Read
-`docs/PLAN.md` first; it is the brief, and its Status section says where things stand. `docs/RESEARCH.md` is the prior art,
-`docs/DECISIONS.md` is what has been settled, `docs/DATA.md` is the register of every
-source we use, and `docs/PICKUP.md` holds the prompts for each session.
+`docs/PLAN.md` first; it is the brief, and its Status section says where things stand.
+`docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
+`docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
+prompts for each session.
 
 ## The three rules
 
