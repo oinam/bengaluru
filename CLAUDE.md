@@ -52,9 +52,10 @@ downloads off the internal disk.
 
 **Heavy work runs at night.** Builds, renders of the central or BBMP areas, tiling,
 uploads, and large downloads start at 23:00 IST and stop at 04:00, while Brajeshwar
-sleeps. Do not start one outside that window; set it up to run in it. A test patch frame
-takes seconds and runs whenever asked. The reasoning, and what is not built yet, are in
-`docs/DECISIONS.md`.
+sleeps. Do not start one outside that window; give it to the night's work instead:
+`mise run night [area]` does nothing outside the window and stops when it closes, and a
+launchd agent starts it at 23:00. A test patch frame or build takes seconds and runs
+whenever asked. The reasoning is in `docs/DECISIONS.md`.
 
 ## Commands
 
@@ -78,14 +79,19 @@ uv run bengaluru render  --area vidhana-soudha  # writes flat frame and full ren
 uv run bengaluru swatches --area vidhana-soudha # writes the candidate palette sheet to out/<area>/
 uv run bengaluru detail  --area vidhana-soudha  # writes one near-final 2048 px frame per detail view to out/<area>/
 uv run bengaluru frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
-uv run bengaluru build   --area central         # renders and tiles the four views one at a time; resumes if stopped
-uv run bengaluru tile    --area central         # builds each view's Deep Zoom pyramid and the search index
+uv run bengaluru build   --area vidhana-soudha  # renders and tiles the four views one at a time; resumes at the first missing frame
+uv run bengaluru tile    --area vidhana-soudha  # builds each view's Deep Zoom pyramid and the search index from frames on disk
+uv run python tools/four_views.py [area]        # lays the four built views side by side in one PNG in out/<area>/
+mise run night [area]                           # the night's work: fetch, prepare, and build inside 23:00 to 04:00; nothing outside it
+uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
+mise run schedule-on                            # installs the launchd agent that starts `mise run night` at 23:00; logs to logs/night.log
+mise run schedule-off                           # removes the agent
 uv run pytest                                   # runs the tests
 uv run ruff check . && uv run ruff format --check .   # lints and checks Python formatting
 ```
 
-`frames`, `build`, and `tile` came over from the Manipur pipeline and have not been run
-here yet. Add each new command as it lands and keep this list current.
+`frames` and `tile` came over from the Manipur pipeline and have not been run on their
+own here yet. Add each new command as it lands and keep this list current.
 
 ## Git
 

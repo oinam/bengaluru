@@ -41,6 +41,10 @@ vocabulary, unchanged.
 Two runs of `detail` gave the same pixels. On disk: 19 MB of sources for the patch, 5 MB
 derived, 3 MB of pictures.
 
+The whole patch also builds: four views of 6,144 × 4,096 px, six frames each, rendered
+and tiled in 54 s, as 565 files and 25 MB of tiles. `20261116-183612_four-views.png`
+shows the four side by side.
+
 ### What looks wrong
 
 The park, the lakes, the road layout, and the massing and heights of the buildings come
@@ -49,7 +53,9 @@ out right. These do not:
 1. **The metro station is a building on the road.** OSM maps the underground Vidhana
    Soudha station as a building, and the pipeline draws it above ground, across Ambedkar
    Veedhi. Underground structures need skipping. The metro line itself is not drawn
-   anywhere: the pipeline reads no railways, and here the line is in a tunnel.
+   anywhere: the pipeline reads no railways, and here the line is in a tunnel. East of
+   the park, the viaduct along MG Road is mapped as one long building and pokes out of
+   the patch as a thin line.
 2. **The landmarks are plain blocks.** Vidhana Soudha has no dome and a blue roof; the
    High Court is cream, not red. Expected until Phase 2, but they are what a resident
    looks for first.

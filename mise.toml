@@ -52,3 +52,30 @@ run = "caffeinate -i uv run bengaluru build --area ${usage_area}"
 description = "Build each view's Deep Zoom pyramid and the search index"
 usage = 'arg "[area]" default="central"'
 run = "uv run bengaluru tile --area ${usage_area}"
+
+[tasks.night]
+description = "Fetch, prepare, and build an area inside the 23:00 to 04:00 window; does nothing outside it"
+usage = 'arg "[area]" default="vidhana-soudha"'
+env = { PYTHONUNBUFFERED = "1" }
+run = "caffeinate -i uv run bengaluru night --area ${usage_area}"
+
+[tasks.schedule-on]
+description = "Install the launchd agent that starts `mise run night` at 23:00"
+run = [
+  "mkdir -p logs",
+  "cp launchd/com.oinam.bengaluru.night.plist ~/Library/LaunchAgents/",
+  "launchctl bootout gui/$(id -u)/com.oinam.bengaluru.night 2>/dev/null || true",
+  "launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.oinam.bengaluru.night.plist",
+]
+
+[tasks.schedule-off]
+description = "Remove the launchd agent"
+run = [
+  "launchctl bootout gui/$(id -u)/com.oinam.bengaluru.night 2>/dev/null || true",
+  "rm -f ~/Library/LaunchAgents/com.oinam.bengaluru.night.plist",
+]
+
+[tasks.four-views]
+description = "Lay the four built views side by side in one PNG in out/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run python tools/four_views.py ${usage_area}"

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts the night's work every day at 23:00 local time: `mise run night`, which fetches,
+  prepares, and builds inside the 23:00 to 04:00 window and does nothing outside it.
+  Install and remove it with `mise run schedule-on` and `mise run schedule-off`; don't edit
+  the copy in ~/Library/LaunchAgents. If the Mac is asleep at 23:00, launchd runs this when
+  the Mac next wakes, and a run that starts after 04:00 does nothing.
+  ProcessType is Standard because a Background agent's disk reads wait behind everyone
+  else's on the external drive; see the Manipur project's docs/DECISIONS.md, 2026-11-11.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.oinam.bengaluru.night</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/brajeshwar/.local/bin/mise</string>
+    <string>run</string>
+    <string>night</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/brajeshwar/dev/bengaluru</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>23</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>ProcessType</key>
+  <string>Standard</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/brajeshwar</string>
+    <key>PATH</key>
+    <string>/Users/brajeshwar/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/brajeshwar/dev/bengaluru/logs/night.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/brajeshwar/dev/bengaluru/logs/night.log</string>
+</dict>
+</plist>

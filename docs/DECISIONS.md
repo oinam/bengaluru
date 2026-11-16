@@ -94,14 +94,36 @@ Brajeshwar: builds and renders run while he sleeps, starting at 23:00 IST and st
 `frames` on the central or BBMP areas, tiling, uploads, and the large downloads. A test
 patch frame takes seconds and runs whenever asked.
 
-Not built yet. What it needs, for the session that builds the first large area:
+Built the same evening, at Brajeshwar's go-ahead:
 
-- A launchd agent that starts the night's task at 23:00, as the Manipur upload does.
-- A stop at 04:00: `build` finishes the frame it is on and exits.
-- Resuming by frame, not by view. `build` resumes after the last finished view today,
-  and one view of a large area may not fit in five hours.
-- The Mac awake and the drive plugged in. `caffeinate` keeps it awake once started; a
-  sleeping Mac needs `pmset repeat wakeorpoweron` shortly before 23:00.
+- **`bengaluru night --area <area>`** (`mise run night [area]`) is the night's work. It
+  fetches, prepares, and builds, each only if it is not already done, and only inside the
+  window. Started outside it, as when the Mac wakes late, it does nothing. The closing
+  time is fixed before anything reads the drive, a lesson from Manipur's first night.
+- **The build stops at 04:00.** No frame, pyramid, or step starts after the window
+  closes; frames being drawn finish, which takes seconds. A pyramid that has started is
+  finished, since a half-written one is no use, so tiling a large view can run past
+  04:00. Session 2 measures by how much.
+- **The build resumes at the first missing frame**, not the first missing view, since
+  one view of a large area may not fit in five hours. A frame is written beside its
+  name and renamed, so a frame on disk is a whole frame. Each view's frame folder
+  records a hash of what its frames were drawn from (the derived data, the canvas, the
+  package's code, and the landmark files); if that changes between nights, the view
+  starts over rather than mixing two renders.
+- **A launchd agent** (`launchd/com.oinam.bengaluru.night.plist`) starts `mise run night`
+  at 23:00 and logs to `logs/night.log`. `mise run schedule-on` installs it and
+  `mise run schedule-off` removes it. It is installed. Its area is the default in
+  `mise.toml`, which is the test patch until Phase 1 changes it to `central`; the test
+  patch is already built, so until then a night's run only confirms the schedule works.
+- **The Mac must be awake and the drive plugged in.** `caffeinate` keeps the Mac awake
+  once the work starts, and without the drive the run stops with a message. Waking a
+  sleeping Mac needs `sudo pmset repeat wakeorpoweron MTWRFSU 22:55:00`, which only
+  Brajeshwar can run; it is not set.
+
+Tested on the test patch, with windows a few seconds long: stopped between views, then
+between a view's frames and its pyramid, then with half a view's frames on disk, and
+finished on the fourth run. Every tile and index file matched an uninterrupted build
+byte for byte; only libvips's own timestamp in each `vips-properties.xml` differed.
 
 ## 2026-11-16 — The name is Bengaluru
 
