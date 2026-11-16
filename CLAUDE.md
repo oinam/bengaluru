@@ -101,7 +101,7 @@ it. A one-off script that renders frames must be a file with an `if __name__ ==
 
 Work directly on `main`; no phase branches, no merging. Commit often, small, with
 messages that say what changed in the picture. Never force-push. Do not push unless
-asked. Remote: `git@github.com:oinam/bangalore.git`. Whether a push deploys is an open
+asked. Remote: `git@github.com:oinam/bengaluru.git`. Whether a push deploys is an open
 decision in `docs/PLAN.md`.
 
 ## /odo

@@ -17,7 +17,7 @@ from rasterio.windows import from_bounds
 
 from bengaluru.areas import Area
 
-USER_AGENT = "bengaluru-map/0.1 (https://github.com/oinam/bangalore)"
+USER_AGENT = "bengaluru-map/0.1 (https://github.com/oinam/bengaluru)"
 OVERPASS_ENDPOINTS = (
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "https://overpass-api.de/api/interpreter",

@@ -84,7 +84,8 @@ Court, all of Cubbon Park, Kanteerava and Chinnaswamy stadiums, and UB City.
 
 ## 2026-11-16 — Remote
 
-`origin` is `git@github.com:oinam/bangalore.git`, at Brajeshwar's word. Nothing is pushed
+`origin` is `git@github.com:oinam/bengaluru.git`, at Brajeshwar's word; it was
+`oinam/bangalore` until the project took its name the same evening. Nothing is pushed
 until he asks, and whether a push deploys is still open.
 
 ## 2026-11-16 — Heavy work runs at night
@@ -135,6 +136,5 @@ drive (`Scratch/bengaluru`), and the `/odo` queue and log. The site's title says
 Bengaluru; its exact wording is set when the viewer lands, and Manipur's is
 "Imphal - Isometric Map".
 
-The GitHub repository is still `oinam/bangalore`, since renaming it is Brajeshwar's to do
-on GitHub; `origin` points there. Place names keep their own spelling: Bangalore Palace
-and Bangalore City railway station.
+The GitHub repository is `oinam/bengaluru` too. Place names keep their own spelling:
+Bangalore Palace and Bangalore City railway station.

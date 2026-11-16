@@ -214,7 +214,7 @@ Stop, or re-scope, if any of these happens:
    wording is still open.
 3. Domain, for example `bengaluru.oinam.com`, and whether a push to `main` deploys, as
    in Manipur.
-4. ~~GitHub remote.~~ `git@github.com:oinam/bangalore.git`, 2026-11-16. Nothing is
+4. ~~GitHub remote.~~ `git@github.com:oinam/bengaluru.git`, 2026-11-16. Nothing is
    pushed yet.
 5. ~~Reuse.~~ Copied the Manipur pipeline in, 2026-11-16.
 6. The look: projection, palette, and tile vocabulary, either Manipur's as is or new
