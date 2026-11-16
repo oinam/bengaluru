@@ -1,0 +1,54 @@
+# Tool versions and the project's commands. uv still installs the packages; mise only
+# picks its version and runs the tasks. Node, pnpm, and rclone join with the viewer.
+
+[tools]
+uv = "0.9.18"
+
+[tasks.setup]
+description = "Install the Python environment"
+run = "uv sync"
+
+[tasks.fetch]
+description = "Download an area's sources into data/raw/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore fetch --area ${usage_area}"
+
+[tasks.plan]
+description = "Write a top-down check to out/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore plan --area ${usage_area}"
+
+[tasks.prepare]
+description = "Write data/derived/<area>.gpkg and its stats"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore prepare --area ${usage_area}"
+
+[tasks.render]
+description = "Write flat frame and full renders to out/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore render --area ${usage_area}"
+
+[tasks.swatches]
+description = "Write the candidate palette sheet to out/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore swatches --area ${usage_area}"
+
+[tasks.detail]
+description = "Write one near-final 2048 px frame per detail view to out/<area>/"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore detail --area ${usage_area}"
+
+[tasks.frames]
+description = "Render the four views as seamless 2048 px frames"
+usage = 'arg "[area]" default="vidhana-soudha"'
+run = "uv run bangalore frames --area ${usage_area}"
+
+[tasks.map]
+description = "Render and tile one view at a time, deleting frames as it goes; resumes if stopped"
+usage = 'arg "[area]" default="central"'
+run = "caffeinate -i uv run bangalore build --area ${usage_area}"
+
+[tasks.tile]
+description = "Build each view's Deep Zoom pyramid and the search index"
+usage = 'arg "[area]" default="central"'
+run = "uv run bangalore tile --area ${usage_area}"

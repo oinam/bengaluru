@@ -1,0 +1,41 @@
+# data and renders are regenerated, never committed
+# out and data/raw are links to an external drive, and git sees a link as a file;
+# see docs/DECISIONS.md
+/out
+/data/raw
+data/derived/
+*.tif
+*.tiff
+*.pbf
+*.gpkg
+*.parquet
+*.dzi
+*_files/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+
+# secrets
+.env
+.env.*
+!.env.example
+mise.local.toml
+
+# scratch: letters and notes that stay on this machine
+/tmp/
+
+# logs
+*.log
+
+# os / editors / agents
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+.claude/
