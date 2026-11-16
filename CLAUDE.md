@@ -4,8 +4,9 @@ An isometric pixel-art map of Bengaluru, rendered procedurally from free, openly
 data. It is the second city after the Manipur map (`~/dev/manipur`, live at
 https://manipur.oinam.com), and it starts from that project's pipeline and lessons.
 
-**Status: planned, not started.** Do not build anything until Brajeshwar says go. Read
-`docs/PLAN.md` first; it is the brief. `docs/RESEARCH.md` is the prior art,
+**Status: Phase 0, with its go/no-go open.** The pipeline is in and the test patch
+renders; Brajeshwar has yet to say whether the frame reads as Bengaluru. Read
+`docs/PLAN.md` first; it is the brief, and its Status section says where things stand. `docs/RESEARCH.md` is the prior art,
 `docs/DECISIONS.md` is what has been settled, `docs/DATA.md` is the register of every
 source we use, and `docs/PICKUP.md` holds the prompts for each session.
 
@@ -46,18 +47,51 @@ the tile pyramid, vanilla TypeScript + OpenSeadragon for the viewer, Cloudflare 
 and R2 for hosting, and mise to pin the tools. No framework unless a decision says so.
 
 Bengaluru is about eight times the Manipur map's Imphal area. Keep renders, tiles, and
-downloads off the internal disk from the first session (see Phase 0 in `docs/PLAN.md`).
+downloads off the internal disk.
+
+**Heavy work runs at night.** Builds, renders of the central or BBMP areas, tiling,
+uploads, and large downloads start at 23:00 IST and stop at 04:00, while Brajeshwar
+sleeps. Do not start one outside that window; set it up to run in it. A test patch frame
+takes seconds and runs whenever asked. The reasoning, and what is not built yet, are in
+`docs/DECISIONS.md`.
 
 ## Commands
 
-None yet. Add each command here as it lands, as the Manipur project's `CLAUDE.md` does.
+mise pins uv and runs each command below as a task: `mise tasks` lists them, and
+`mise run <task> [area]` runs one, for example `mise run detail vidhana-soudha`. The
+areas are `vidhana-soudha` (the test patch), `central`, and `bbmp`.
+
+On this Mac, `out/` is a link to `/Volumes/2021OCT-5TB/Scratch/bangalore/out` and
+`data/raw/` is a link to `/Volumes/2021OCT-5TB/Scratch/bangalore/raw`, so renders, tiles,
+and downloads stay off the internal disk and the checkout holds only code and derived
+data. The drive must be plugged in for anything that fetches, prepares, or renders. Do
+not replace the links with folders; the reasoning is in `docs/DECISIONS.md`.
+
+```
+mise install && mise run setup                  # installs the pinned tools, then the Python environment
+uv sync                                         # installs the pinned Python 3.12 environment
+uv run bangalore fetch   --area vidhana-soudha  # downloads into data/raw/<area>/; shared files into data/raw/_*/
+uv run bangalore plan    --area vidhana-soudha  # writes a top-down check to out/<area>/
+uv run bangalore prepare --area vidhana-soudha  # writes data/derived/<area>.gpkg and stats
+uv run bangalore render  --area vidhana-soudha  # writes flat frame and full renders to out/<area>/
+uv run bangalore swatches --area vidhana-soudha # writes the candidate palette sheet to out/<area>/
+uv run bangalore detail  --area vidhana-soudha  # writes one near-final 2048 px frame per detail view to out/<area>/
+uv run bangalore frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
+uv run bangalore build   --area central         # renders and tiles the four views one at a time; resumes if stopped
+uv run bangalore tile    --area central         # builds each view's Deep Zoom pyramid and the search index
+uv run pytest                                   # runs the tests
+uv run ruff check . && uv run ruff format --check .   # lints and checks Python formatting
+```
+
+`frames`, `build`, and `tile` came over from the Manipur pipeline and have not been run
+here yet. Add each new command as it lands and keep this list current.
 
 ## Git
 
-Not a repository yet. When Brajeshwar says go, the first session runs `git init` here,
-works directly on `main`, and commits small, with messages that say what changed in the
-picture. Never force-push. Do not push unless asked. The remote and whether a push
-deploys are open decisions in `docs/PLAN.md`.
+Work directly on `main`; no phase branches, no merging. Commit often, small, with
+messages that say what changed in the picture. Never force-push. Do not push unless
+asked. Remote: `git@github.com:oinam/bangalore.git`. Whether a push deploys is an open
+decision in `docs/PLAN.md`.
 
 ## /odo
 

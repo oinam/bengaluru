@@ -2,8 +2,69 @@
 
 ## Status
 
-*Draft 1, 16 November 2026. Planned, not started. Brajeshwar asked for the plan so a
-later session can pick it up cold; nothing is built until he says go.*
+*16 November 2026. Phase 0, Session 1 done: the pipeline is in, and the first frames of
+the test patch are in `out/vidhana-soudha/`. Phase 0's go/no-go is open: Brajeshwar looks
+at `20261116-174652_detail-315.png` (north up) and `20261116-174652_detail-0.png` (turned
+45°) and says whether it reads as Bengaluru. Session 2 then measures the city.*
+
+### Phase 0 numbers, 2026-11-16
+
+The `vidhana-soudha` patch: 12.965–12.990 N, 77.580–77.605 E, 2.7 × 2.8 km, 7.5 km²,
+about a third of it Cubbon Park. Drawn with Manipur's projection, palette, and building
+vocabulary, unchanged.
+
+| | |
+|---|---|
+| OSM buildings | 6,041 |
+| Open Buildings v3 footprints in the box | 13,469 |
+| of those, under 0.70 confidence | 3,058 dropped |
+| duplicates of an OSM building | 4,801 dropped |
+| on water or on a major road | 97 dropped |
+| Open Buildings kept | 5,513 |
+| **Buildings drawn** | **11,435**, 52% from OSM and 48% from Open Buildings |
+| Heights from the 2.5D raster | 10,846 (94.8%) |
+| Heights from OSM tags | 396 (3.5%) |
+| No height, so a default by footprint | 193 (1.7%) |
+| Height, median / 95th percentile / tallest | 8.0 m / 16.0 m / 115 m |
+| 11 m and taller, drawn as blocks | 2,585; 116 are over 30 m |
+| Ground, by WorldCover | 62% built, 35% trees, 2% grass, 1% other |
+| Trees placed | 30,864; OSM maps 304 single trees and 6 tree rows here |
+
+| Step | Time on this Mac |
+|---|---|
+| `fetch` | 10 min, nearly all of it the one 569 MB Open Buildings cell, which is kept and covers the whole city, and four failed Overpass tries before the fifth worked |
+| `plan` | 3 s |
+| `prepare` | 6.5 s |
+| `render`, the flat frame and the whole patch at 7,832 × 4,156 px | 1.3 s and 1.9 s |
+| `detail`, one near-final 2048 px frame | 3.2 s, at a peak of 1.3 GB of memory |
+
+Two runs of `detail` gave the same pixels. On disk: 19 MB of sources for the patch, 5 MB
+derived, 3 MB of pictures.
+
+### What looks wrong
+
+The park, the lakes, the road layout, and the massing and heights of the buildings come
+out right. These do not:
+
+1. **The metro station is a building on the road.** OSM maps the underground Vidhana
+   Soudha station as a building, and the pipeline draws it above ground, across Ambedkar
+   Veedhi. Underground structures need skipping. The metro line itself is not drawn
+   anywhere: the pipeline reads no railways, and here the line is in a tunnel.
+2. **The landmarks are plain blocks.** Vidhana Soudha has no dome and a blue roof; the
+   High Court is cream, not red. Expected until Phase 2, but they are what a resident
+   looks for first.
+3. **Courtyards and stadium bowls are gray plates at roof height.** Kanteerava Stadium's
+   field is a gray lid; Vidhana Soudha's courtyards are the same.
+4. **The roofs are Imphal's.** Mid-size buildings get red, orange, and blue pitched tin
+   roofs. This part of Bengaluru is flat concrete terraces, with red tile only on the
+   older bungalows.
+5. **The towers are tall cream boxes** with dotted windows: UB City and the towers north
+   of the park. No glass, no setbacks, no repeated storeys.
+6. **Cubbon Park is one solid forest.** WorldCover calls nearly the whole park "trees",
+   so the lawns, the bamboo, and the open ground around the bandstand are gone. Outside
+   the park the avenue trees are thin: streets get almost none.
+7. **The ground between buildings is sandy.** Manipur's color for built-up land reads as
+   bare earth, which makes the office quarter look dusty.
 
 ## What this is
 
@@ -64,10 +125,11 @@ before use; the candidates are listed there.
 
 Bounding boxes, to be confirmed in Phase 0:
 
-- Test patch, Vidhana Soudha and Cubbon Park: 12.970–12.985 N, 77.585–77.600 E
-  (about 1.6 × 1.6 km)
-- Central Bengaluru, inside the Outer Ring Road: about 12.90–13.05 N, 77.52–77.68 E
-- BBMP area: about 12.83–13.14 N, 77.46–77.78 E
+- Test patch, Vidhana Soudha and Cubbon Park (`vidhana-soudha`): 12.965–12.990 N,
+  77.580–77.605 E (about 2.7 × 2.8 km), widened in Phase 0 so a north-up frame is full
+- Central Bengaluru, inside the Outer Ring Road (`central`): about 12.90–13.05 N,
+  77.52–77.68 E
+- BBMP area (`bbmp`): about 12.83–13.14 N, 77.46–77.78 E
 - Local metric CRS: UTM 43N, EPSG:32643
 
 ## Architecture
@@ -141,13 +203,13 @@ Stop, or re-scope, if any of these happens:
 
 ## Open decisions for Brajeshwar
 
-1. Go or not, and when. Nothing starts before this.
+1. ~~Go or not, and when.~~ Go, 2026-11-16.
 2. Name: "Bengaluru" or "Bangalore" on the site, and the site's title.
 3. Domain, for example `bengaluru.oinam.com`, and whether a push to `main` deploys, as
    in Manipur.
-4. GitHub remote, for example `oinam/bangalore-map`.
-5. Reuse: copy the Manipur pipeline in (the default above), or extract a shared package
-   first.
+4. ~~GitHub remote.~~ `git@github.com:oinam/bangalore.git`, 2026-11-16. Nothing is
+   pushed yet.
+5. ~~Reuse.~~ Copied the Manipur pipeline in, 2026-11-16.
 6. The look: projection, palette, and tile vocabulary, either Manipur's as is or new
    options rendered for Bengaluru.
 7. Which landmarks get sprites first.

@@ -24,7 +24,8 @@ DEDUPE_COVERED = 0.50
 WATER_COVERED = 0.50
 MAJOR_ROAD_M = 8.0
 MIN_HEIGHT_M = 2.5
-MAX_HEIGHT_M = 80.0
+# Above the city's tallest tower, about 160 m, so only a mistagged height is cut.
+MAX_HEIGHT_M = 170.0
 HEIGHT_PERCENTILE = 75
 METERS_PER_LEVEL = 3.2
 
