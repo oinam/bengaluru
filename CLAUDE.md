@@ -86,10 +86,13 @@ mise run night [area]                           # the night's work: fetch, prepa
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
 mise run schedule-on                            # installs the launchd agent that starts `mise run night` at 23:00; logs to logs/night.log
 mise run schedule-off                           # removes the agent
-sudo install -m 440 -o root -g wheel launchd/bengaluru-wake.sudoers /etc/sudoers.d/bengaluru-wake   # Brajeshwar only: lets the night's work wake the Mac at 23:00
 uv run pytest                                   # runs the tests
 uv run ruff check . && uv run ruff format --check .   # lints and checks Python formatting
 ```
+
+The night's work wakes the Mac at 23:00 only if the Mac-wide permission in `docs/WAKE.md`
+is installed, which is Brajeshwar's to do. Never ask for, or add, any other passwordless
+`sudo`.
 
 `frames` and `tile` came over from the Manipur pipeline and have not been run on their
 own here yet. Add each new command as it lands and keep this list current.

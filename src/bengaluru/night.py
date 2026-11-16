@@ -12,8 +12,8 @@ from bengaluru.tile import build
 
 NIGHT_WINDOW = "23:00-04:00"
 PMSET = "/usr/bin/pmset"
-# Installed from launchd/bengaluru-wake.sudoers; it allows scheduling a wake and nothing else.
-WAKE_RULE = Path("/etc/sudoers.d/bengaluru-wake")
+# The Mac-wide permission to schedule a wake, shared by every project; see docs/WAKE.md.
+WAKE_RULE = Path("/etc/sudoers.d/claude-wake")
 
 
 def closing_time(window: str, now: dt.datetime) -> dt.datetime | None:

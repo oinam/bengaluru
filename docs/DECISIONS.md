@@ -143,17 +143,17 @@ Bangalore Palace and Bangalore City railway station.
 ## 2026-11-16 — The night's work wakes the Mac itself, once allowed
 
 Waking a sleeping Mac takes `pmset schedule wake`, which needs root, so it needs
-Brajeshwar's permission once. `launchd/bengaluru-wake.sudoers` is that permission: one
-sudoers line that lets his account run `pmset schedule wake <when>` without a password,
-and nothing else. He installs it; nothing in the project can.
+Brajeshwar's permission once: one sudoers line that lets his account schedule or cancel a
+wake without a password, and nothing else. He installs it; nothing in the project can.
 
-```
-sudo install -m 440 -o root -g wheel launchd/bengaluru-wake.sudoers /etc/sudoers.d/bengaluru-wake
-sudo visudo -c
-mise run night
-```
+The permission is Mac-wide, `/etc/sudoers.d/claude-wake`, not this project's. Brajeshwar
+asked for one that any project's scheduled work can use instead of one to remember per
+project, and a sudoers rule belongs to the account anyway. `docs/WAKE.md` has the line,
+how to install and remove it, why it stays that narrow, and how a project uses it. The
+project's own `launchd/bengaluru-wake.sudoers`, an hour old and never installed, is gone.
 
-The last line sets the first wake. After that the chain keeps itself going: every run of
+After installing it, `mise run night` sets the first wake. Then the chain keeps itself
+going: every run of
 `bengaluru night` sets a wake for the next 23:00, and launchd runs the agent whenever the
 Mac wakes after a missed night (it wakes at 05:58 every day anyway), so a skipped night
 costs one night. The wake is at 23:00 exactly, not earlier: this Mac sleeps again after
@@ -167,5 +167,5 @@ Not known yet: whether the wake and the work hold with the lid closed. Scheduled
 are only dependable on AC power. Until a night proves otherwise, leave the Mac plugged
 in with the lid open.
 
-To take the permission away: `sudo rm /etc/sudoers.d/bengaluru-wake`. `mise run
+To take the permission away: `sudo rm /etc/sudoers.d/claude-wake`. `mise run
 schedule-off` removes the agent but leaves any wake already set, at most one.

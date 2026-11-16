@@ -1,7 +1,0 @@
-# Lets Brajeshwar's account schedule a wake of this Mac without a password, and nothing
-# else, so the night's work can wake it at 23:00 (docs/DECISIONS.md, 2026-11-16).
-# Install: sudo install -m 440 -o root -g wheel launchd/bengaluru-wake.sudoers /etc/sudoers.d/bengaluru-wake
-# Remove:  sudo rm /etc/sudoers.d/bengaluru-wake
-# The installed copy is the one that counts; editing this file changes nothing until it
-# is installed again.
-brajeshwar ALL=(root) NOPASSWD: /usr/bin/pmset schedule wake *
