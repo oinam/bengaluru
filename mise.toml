@@ -57,7 +57,7 @@ run = "uv run bengaluru tile --area ${usage_area}"
 description = "Fetch, prepare, and build an area inside the 23:00 to 04:00 window; does nothing outside it"
 usage = 'arg "[area]" default="vidhana-soudha"'
 env = { PYTHONUNBUFFERED = "1" }
-run = "caffeinate -i uv run bengaluru night --area ${usage_area}"
+run = "caffeinate -is uv run bengaluru night --area ${usage_area}"
 
 [tasks.schedule-on]
 description = "Install the launchd agent that starts `mise run night` at 23:00"

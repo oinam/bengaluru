@@ -5,7 +5,9 @@
   prepares, and builds inside the 23:00 to 04:00 window and does nothing outside it.
   Install and remove it with `mise run schedule-on` and `mise run schedule-off`; don't edit
   the copy in ~/Library/LaunchAgents. If the Mac is asleep at 23:00, launchd runs this when
-  the Mac next wakes, and a run that starts after 04:00 does nothing.
+  the Mac next wakes, and a run that starts after 04:00 does nothing but set the next
+  night's wake. caffeinate holds the Mac awake from the first second: this Mac sleeps
+  after one idle minute, and -s keeps it up on AC power even where -i would not.
   ProcessType is Standard because a Background agent's disk reads wait behind everyone
   else's on the external drive; see the Manipur project's docs/DECISIONS.md, 2026-11-11.
 -->
@@ -15,6 +17,8 @@
   <string>com.oinam.bengaluru.night</string>
   <key>ProgramArguments</key>
   <array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-is</string>
     <string>/Users/brajeshwar/.local/bin/mise</string>
     <string>run</string>
     <string>night</string>

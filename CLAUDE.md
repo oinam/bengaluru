@@ -86,6 +86,7 @@ mise run night [area]                           # the night's work: fetch, prepa
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
 mise run schedule-on                            # installs the launchd agent that starts `mise run night` at 23:00; logs to logs/night.log
 mise run schedule-off                           # removes the agent
+sudo install -m 440 -o root -g wheel launchd/bengaluru-wake.sudoers /etc/sudoers.d/bengaluru-wake   # Brajeshwar only: lets the night's work wake the Mac at 23:00
 uv run pytest                                   # runs the tests
 uv run ruff check . && uv run ruff format --check .   # lints and checks Python formatting
 ```

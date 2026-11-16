@@ -116,11 +116,11 @@ Built the same evening, at Brajeshwar's go-ahead:
   `mise run schedule-off` removes it. It is installed. Its area is the default in
   `mise.toml`, which is the test patch until Phase 1 changes it to `central`; the test
   patch is already built, so until then a night's run only confirms the schedule works.
-- **The Mac must be awake and the drive plugged in.** `caffeinate` keeps the Mac awake
-  once the work starts, and without the drive the run stops with a message. Nothing
-  wakes a sleeping Mac at 23:00 yet. `pmset repeat` holds one wake time, and this Mac's
-  is taken: it wakes at 05:58 every day. So either the Mac is left awake at 23:00, or
-  Brajeshwar sets one-off wakes with `sudo pmset schedule wake "MM/DD/YY 22:55:00"`.
+- **The Mac must be awake and the drive plugged in.** Without the drive the run stops
+  with a message. `caffeinate -is` holds the Mac awake from the agent's first second to
+  its last, as Brajeshwar suggested: this Mac sleeps after one idle minute, and `-s`
+  keeps it up on AC power where `-i` alone might not. caffeinate cannot wake a Mac that
+  is already asleep; see the next entry.
 
 Tested on the test patch, with windows a few seconds long: stopped between views, then
 between a view's frames and its pyramid, then with half a view's frames on disk, and
@@ -139,3 +139,33 @@ same evening.
 
 The GitHub repository is `oinam/bengaluru` too. Place names keep their own spelling:
 Bangalore Palace and Bangalore City railway station.
+
+## 2026-11-16 — The night's work wakes the Mac itself, once allowed
+
+Waking a sleeping Mac takes `pmset schedule wake`, which needs root, so it needs
+Brajeshwar's permission once. `launchd/bengaluru-wake.sudoers` is that permission: one
+sudoers line that lets his account run `pmset schedule wake <when>` without a password,
+and nothing else. He installs it; nothing in the project can.
+
+```
+sudo install -m 440 -o root -g wheel launchd/bengaluru-wake.sudoers /etc/sudoers.d/bengaluru-wake
+sudo visudo -c
+mise run night
+```
+
+The last line sets the first wake. After that the chain keeps itself going: every run of
+`bengaluru night` sets a wake for the next 23:00, and launchd runs the agent whenever the
+Mac wakes after a missed night (it wakes at 05:58 every day anyway), so a skipped night
+costs one night. The wake is at 23:00 exactly, not earlier: this Mac sleeps again after
+one idle minute, and launchd starts a job it slept through the moment it wakes.
+
+Without the permission nothing asks for it: the run says no wake is set and carries on,
+and the Mac has to be awake at 23:00 by other means. `pmset repeat` is not used, because
+it holds a single wake time and this Mac's is the 05:58 one.
+
+Not known yet: whether the wake and the work hold with the lid closed. Scheduled wakes
+are only dependable on AC power. Until a night proves otherwise, leave the Mac plugged
+in with the lid open.
+
+To take the permission away: `sudo rm /etc/sudoers.d/bengaluru-wake`. `mise run
+schedule-off` removes the agent but leaves any wake already set, at most one.
