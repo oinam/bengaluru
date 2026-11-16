@@ -2,7 +2,7 @@ import geopandas as gpd
 import numpy as np
 import shapely
 
-from bangalore.prepare import assign_heights, duplicate_mask, mostly_on_mask
+from bengaluru.prepare import assign_heights, duplicate_mask, mostly_on_mask
 
 
 def frame(*polygons):

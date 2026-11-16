@@ -3,8 +3,8 @@ import numpy as np
 import pytest
 import shapely
 
-from bangalore.palettes import CANDIDATES, SLOT, SLOTS
-from bangalore.render import (
+from bengaluru.palettes import CANDIDATES, SLOT, SLOTS
+from bengaluru.render import (
     PROJECTION_A,
     PROJECTION_B,
     Layers,

@@ -26,11 +26,10 @@ Manipur map's, taken from `~/dev/manipur` at commit
 `eb359531bef354647cc7139fcc5699b544ee34af` (its `main` on 2026-11-16), not a shared
 package: two cities are too few to know what is common.
 
-Copied: the Python package (`src/manipur` became `src/bangalore`, and the command is
-`bangalore`), the tests, `pyproject.toml`, `uv.lock` (so the package versions match),
+Copied: the Python package (`src/manipur` became `src/bengaluru`, and the command is
+`bengaluru`), the tests, `pyproject.toml`, `uv.lock` (so the package versions match),
 `.python-version`, `mise.toml`, `.gitignore`, and the MIT `LICENSE`. The package and
-command are named for the folder and the repository, `bangalore`; what the site calls the
-city is still Brajeshwar's to decide.
+command were `bangalore` for their first hour; see "The name is Bengaluru" below.
 
 Dropped as Imphal-only:
 
@@ -56,8 +55,8 @@ Changed: the metric CRS is UTM 43N (EPSG:32643), and the seed is 1537.
 ## 2026-11-16 — Renders and downloads live on the external drive
 
 As in the Manipur project, and from the first session. `out/` is a link to
-`/Volumes/2021OCT-5TB/Scratch/bangalore/out` and `data/raw/` is a link to
-`/Volumes/2021OCT-5TB/Scratch/bangalore/raw`. `.gitignore` names them `/out` and
+`/Volumes/2021OCT-5TB/Scratch/bengaluru/out` and `data/raw/` is a link to
+`/Volumes/2021OCT-5TB/Scratch/bengaluru/raw`. `.gitignore` names them `/out` and
 `/data/raw`, without a trailing slash, because git sees a link as a file. The drive must
 be plugged in for anything that fetches, prepares, or renders.
 
@@ -66,7 +65,7 @@ measures what the central and BBMP areas need and moves it to the drive if it is
 the Mac had 41 GB free on 2026-11-16.
 
 Nothing on the drive is precious. `out/` rebuilds from `data/raw/`, and `data/raw/`
-downloads again with `bangalore fetch`.
+downloads again with `bengaluru fetch`.
 
 ## 2026-11-16 — Shared downloads are fetched once
 
@@ -103,3 +102,16 @@ Not built yet. What it needs, for the session that builds the first large area:
   and one view of a large area may not fit in five hours.
 - The Mac awake and the drive plugged in. `caffeinate` keeps it awake once started; a
   sleeping Mac needs `pmset repeat wakeorpoweron` shortly before 23:00.
+
+## 2026-11-16 — The name is Bengaluru
+
+Brajeshwar: read it as Bengaluru, and rename the folder, the project references, and
+the title. So everything the project is called by is `bengaluru`: the folder
+(`~/dev/bengaluru`), the Python package and its command, the folder on the external
+drive (`Scratch/bengaluru`), and the `/odo` queue and log. The site's title says
+Bengaluru; its exact wording is set when the viewer lands, and Manipur's is
+"Imphal - Isometric Map".
+
+The GitHub repository is still `oinam/bangalore`, since renaming it is Brajeshwar's to do
+on GitHub; `origin` points there. Place names keep their own spelling: Bangalore Palace
+and Bangalore City railway station.

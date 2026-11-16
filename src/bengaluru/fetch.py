@@ -15,9 +15,9 @@ from pyproj import Transformer
 from rasterio.merge import merge
 from rasterio.windows import from_bounds
 
-from bangalore.areas import Area
+from bengaluru.areas import Area
 
-USER_AGENT = "bangalore-map/0.1 (https://github.com/oinam/bangalore)"
+USER_AGENT = "bengaluru-map/0.1 (https://github.com/oinam/bangalore)"
 OVERPASS_ENDPOINTS = (
     "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     "https://overpass-api.de/api/interpreter",

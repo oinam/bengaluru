@@ -10,8 +10,8 @@ import numpy as np
 import pyvips
 from pyproj import Transformer
 
-from bangalore.areas import Area
-from bangalore.detail import (
+from bengaluru.areas import Area
+from bengaluru.detail import (
     DEFAULT_VIEW,
     LANDMARKS_PATH,
     PROJECTION,
@@ -24,7 +24,7 @@ from bangalore.detail import (
     plan_view,
     trees_path,
 )
-from bangalore.prepare import METRIC_CRS, derived_path
+from bengaluru.prepare import METRIC_CRS, derived_path
 
 TILE_PX = 512
 AREA_KINDS = {"city", "suburb", "town"}

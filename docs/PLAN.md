@@ -204,7 +204,8 @@ Stop, or re-scope, if any of these happens:
 ## Open decisions for Brajeshwar
 
 1. ~~Go or not, and when.~~ Go, 2026-11-16.
-2. Name: "Bengaluru" or "Bangalore" on the site, and the site's title.
+2. ~~Name.~~ Bengaluru, on the site and in its title, 2026-11-16. The title's exact
+   wording is still open.
 3. Domain, for example `bengaluru.oinam.com`, and whether a push to `main` deploys, as
    in Manipur.
 4. ~~GitHub remote.~~ `git@github.com:oinam/bangalore.git`, 2026-11-16. Nothing is

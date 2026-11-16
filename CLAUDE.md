@@ -62,8 +62,8 @@ mise pins uv and runs each command below as a task: `mise tasks` lists them, and
 `mise run <task> [area]` runs one, for example `mise run detail vidhana-soudha`. The
 areas are `vidhana-soudha` (the test patch), `central`, and `bbmp`.
 
-On this Mac, `out/` is a link to `/Volumes/2021OCT-5TB/Scratch/bangalore/out` and
-`data/raw/` is a link to `/Volumes/2021OCT-5TB/Scratch/bangalore/raw`, so renders, tiles,
+On this Mac, `out/` is a link to `/Volumes/2021OCT-5TB/Scratch/bengaluru/out` and
+`data/raw/` is a link to `/Volumes/2021OCT-5TB/Scratch/bengaluru/raw`, so renders, tiles,
 and downloads stay off the internal disk and the checkout holds only code and derived
 data. The drive must be plugged in for anything that fetches, prepares, or renders. Do
 not replace the links with folders; the reasoning is in `docs/DECISIONS.md`.
@@ -71,15 +71,15 @@ not replace the links with folders; the reasoning is in `docs/DECISIONS.md`.
 ```
 mise install && mise run setup                  # installs the pinned tools, then the Python environment
 uv sync                                         # installs the pinned Python 3.12 environment
-uv run bangalore fetch   --area vidhana-soudha  # downloads into data/raw/<area>/; shared files into data/raw/_*/
-uv run bangalore plan    --area vidhana-soudha  # writes a top-down check to out/<area>/
-uv run bangalore prepare --area vidhana-soudha  # writes data/derived/<area>.gpkg and stats
-uv run bangalore render  --area vidhana-soudha  # writes flat frame and full renders to out/<area>/
-uv run bangalore swatches --area vidhana-soudha # writes the candidate palette sheet to out/<area>/
-uv run bangalore detail  --area vidhana-soudha  # writes one near-final 2048 px frame per detail view to out/<area>/
-uv run bangalore frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
-uv run bangalore build   --area central         # renders and tiles the four views one at a time; resumes if stopped
-uv run bangalore tile    --area central         # builds each view's Deep Zoom pyramid and the search index
+uv run bengaluru fetch   --area vidhana-soudha  # downloads into data/raw/<area>/; shared files into data/raw/_*/
+uv run bengaluru plan    --area vidhana-soudha  # writes a top-down check to out/<area>/
+uv run bengaluru prepare --area vidhana-soudha  # writes data/derived/<area>.gpkg and stats
+uv run bengaluru render  --area vidhana-soudha  # writes flat frame and full renders to out/<area>/
+uv run bengaluru swatches --area vidhana-soudha # writes the candidate palette sheet to out/<area>/
+uv run bengaluru detail  --area vidhana-soudha  # writes one near-final 2048 px frame per detail view to out/<area>/
+uv run bengaluru frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
+uv run bengaluru build   --area central         # renders and tiles the four views one at a time; resumes if stopped
+uv run bengaluru tile    --area central         # builds each view's Deep Zoom pyramid and the search index
 uv run pytest                                   # runs the tests
 uv run ruff check . && uv run ruff format --check .   # lints and checks Python formatting
 ```
@@ -98,8 +98,8 @@ decision in `docs/PLAN.md`.
 
 The usual Oinam convention, once Brajeshwar creates the files:
 
-- Queue: `~/_/Oinam/1-Projects/devCommands/bangalore.md`
-- Log:   `~/_/Oinam/1-Projects/devLogs/bangalore.md`
+- Queue: `~/_/Oinam/1-Projects/devCommands/bengaluru.md`
+- Log:   `~/_/Oinam/1-Projects/devLogs/bengaluru.md`
 
 ## Things that are explicitly parked
 

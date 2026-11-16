@@ -1,10 +1,10 @@
 import geopandas as gpd
 from shapely.geometry import LineString
 
-from bangalore.areas import Area
-from bangalore.detail import PROJECTION
-from bangalore.prepare import METRIC_CRS, derived_path
-from bangalore.tile import flow_lines, pyramid_version
+from bengaluru.areas import Area
+from bengaluru.detail import PROJECTION
+from bengaluru.prepare import METRIC_CRS, derived_path
+from bengaluru.tile import flow_lines, pyramid_version
 
 
 def test_pyramid_version_follows_the_frame_bytes(tmp_path):

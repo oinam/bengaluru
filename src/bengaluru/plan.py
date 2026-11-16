@@ -8,9 +8,9 @@ import pandas as pd
 import shapely
 from PIL import Image, ImageDraw
 
-from bangalore.areas import Area
-from bangalore.fetch import raw_dir
-from bangalore.osm import load_features
+from bengaluru.areas import Area
+from bengaluru.fetch import raw_dir
+from bengaluru.osm import load_features
 
 METRIC_CRS = 32643
 MARGIN_PX = 20

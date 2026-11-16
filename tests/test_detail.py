@@ -7,8 +7,8 @@ import pytest
 import shapely
 from PIL import Image, ImageDraw
 
-from bangalore.areas import get_area
-from bangalore.detail import (
+from bengaluru.areas import get_area
+from bengaluru.detail import (
     DEFAULT_VIEW,
     FRAME_PX,
     LANDMARKS_PATH,
@@ -27,7 +27,7 @@ from bangalore.detail import (
     render_frame,
     view_projection,
 )
-from bangalore.render import PROJECTION_B, Layers, centered_viewport
+from bengaluru.render import PROJECTION_B, Layers, centered_viewport
 
 
 def sample_layers():

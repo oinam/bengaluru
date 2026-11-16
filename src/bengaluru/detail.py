@@ -23,12 +23,12 @@ from shapely.geometry import LineString, Point
 from shapely.geometry.polygon import orient
 from shapely.ops import substring
 
-from bangalore.areas import Area
-from bangalore.fetch import raw_dir
-from bangalore.osm import load_features
-from bangalore.palettes import PALETTE, SLOT, SLOTS
-from bangalore.prepare import METRIC_CRS, derived_path
-from bangalore.render import (
+from bengaluru.areas import Area
+from bengaluru.fetch import raw_dir
+from bengaluru.osm import load_features
+from bengaluru.palettes import PALETTE, SLOT, SLOTS
+from bengaluru.prepare import METRIC_CRS, derived_path
+from bengaluru.render import (
     LINED_ROADS,
     PROJECTION_B,
     ROAD_ORDER,

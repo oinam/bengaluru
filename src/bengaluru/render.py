@@ -19,9 +19,9 @@ from shapely.affinity import affine_transform
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import orient
 
-from bangalore.areas import Area
-from bangalore.palettes import CANDIDATES, PALETTE, ROOF_SLOTS, SLOT, SLOTS, lookup
-from bangalore.prepare import METRIC_CRS, derived_path
+from bengaluru.areas import Area
+from bengaluru.palettes import CANDIDATES, PALETTE, ROOF_SLOTS, SLOT, SLOTS, lookup
+from bengaluru.prepare import METRIC_CRS, derived_path
 
 SEED = 1537
 PIXELS_PER_METER = 2.0

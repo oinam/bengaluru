@@ -12,10 +12,10 @@ from rasterio.features import geometry_mask, shapes
 from rasterio.windows import Window, from_bounds
 from rasterio.windows import transform as window_transform
 
-from bangalore.areas import Area
-from bangalore.fetch import raw_dir
-from bangalore.osm import Feature, load_features
-from bangalore.plan import load_open_buildings
+from bengaluru.areas import Area
+from bengaluru.fetch import raw_dir
+from bengaluru.osm import Feature, load_features
+from bengaluru.plan import load_open_buildings
 
 METRIC_CRS = 32643
 MIN_CONFIDENCE = 0.70

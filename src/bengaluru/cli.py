@@ -1,61 +1,61 @@
-"""Command line entry point: `bangalore <stage> --area <name>`."""
+"""Command line entry point: `bengaluru <stage> --area <name>`."""
 
 import argparse
 from collections.abc import Callable
 
-from bangalore.areas import Area, get_area
+from bengaluru.areas import Area, get_area
 
 
 def run_fetch(area: Area) -> None:
-    from bangalore.fetch import fetch
+    from bengaluru.fetch import fetch
 
     fetch(area)
 
 
 def run_plan(area: Area) -> None:
-    from bangalore.plan import plan
+    from bengaluru.plan import plan
 
     plan(area)
 
 
 def run_prepare(area: Area) -> None:
-    from bangalore.prepare import prepare
+    from bengaluru.prepare import prepare
 
     prepare(area)
 
 
 def run_render(area: Area) -> None:
-    from bangalore.render import render
+    from bengaluru.render import render
 
     render(area)
 
 
 def run_swatches(area: Area) -> None:
-    from bangalore.render import swatches
+    from bengaluru.render import swatches
 
     swatches(area)
 
 
 def run_detail(area: Area) -> None:
-    from bangalore.detail import detail
+    from bengaluru.detail import detail
 
     detail(area)
 
 
 def run_frames(area: Area) -> None:
-    from bangalore.detail import frames
+    from bengaluru.detail import frames
 
     frames(area)
 
 
 def run_build(area: Area) -> None:
-    from bangalore.tile import build
+    from bengaluru.tile import build
 
     build(area)
 
 
 def run_tile(area: Area) -> None:
-    from bangalore.tile import tile
+    from bengaluru.tile import tile
 
     tile(area)
 
@@ -74,7 +74,7 @@ STAGES: dict[str, Callable[[Area], None]] = {
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="bangalore")
+    parser = argparse.ArgumentParser(prog="bengaluru")
     commands = parser.add_subparsers(dest="stage", required=True)
     for stage in STAGES:
         commands.add_parser(stage).add_argument("--area", required=True)

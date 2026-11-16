@@ -10,7 +10,7 @@ source; never remove one. "Used for" must be specific.
 | Google Open Buildings 2.5D Temporal | v1, 2023-06-30 epoch, `gs://open-buildings-temporal-data/v1/geotiffs/3bae4_2023_06_30/`, 2026-11-16 (`vidhana-soudha`) | CC BY 4.0 or ODbL 1.0, user's choice; we use CC BY 4.0 | https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_Research_open-buildings-temporal_v1 | building heights (band 2, `building_height`, meters, 0 to 100) | "Google Open Buildings 2.5D Temporal, CC BY 4.0. Contains modified Copernicus Sentinel data" |
 | ESA WorldCover 2021 | v200, tile `N12E075`, 2026-11-16 (`vidhana-soudha`) | CC BY 4.0 | https://esa-worldcover.org/en/data-access | ground class (trees, grass, built, water); never sampled for color | "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium" |
 
-Fetch dates and exact file names are written by `bangalore fetch`, which appends to
+Fetch dates and exact file names are written by `bengaluru fetch`, which appends to
 `data/raw/<area>/SOURCES.txt` and reminds you to update this table.
 
 ## Licenses as read on 2026-11-16
