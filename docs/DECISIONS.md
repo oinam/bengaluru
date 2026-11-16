@@ -116,9 +116,10 @@ Built the same evening, at Brajeshwar's go-ahead:
   `mise.toml`, which is the test patch until Phase 1 changes it to `central`; the test
   patch is already built, so until then a night's run only confirms the schedule works.
 - **The Mac must be awake and the drive plugged in.** `caffeinate` keeps the Mac awake
-  once the work starts, and without the drive the run stops with a message. Waking a
-  sleeping Mac needs `sudo pmset repeat wakeorpoweron MTWRFSU 22:55:00`, which only
-  Brajeshwar can run; it is not set.
+  once the work starts, and without the drive the run stops with a message. Nothing
+  wakes a sleeping Mac at 23:00 yet. `pmset repeat` holds one wake time, and this Mac's
+  is taken: it wakes at 05:58 every day. So either the Mac is left awake at 23:00, or
+  Brajeshwar sets one-off wakes with `sudo pmset schedule wake "MM/DD/YY 22:55:00"`.
 
 Tested on the test patch, with windows a few seconds long: stopped between views, then
 between a view's frames and its pyramid, then with half a view's frames on disk, and

@@ -93,6 +93,10 @@ uv run ruff check . && uv run ruff format --check .   # lints and checks Python 
 `frames` and `tile` came over from the Manipur pipeline and have not been run on their
 own here yet. Add each new command as it lands and keep this list current.
 
+The render pool starts its workers afresh, and each one imports the script that started
+it. A one-off script that renders frames must be a file with an `if __name__ ==
+"__main__":` guard, never code piped to `python -`, which respawns workers without end.
+
 ## Git
 
 Work directly on `main`; no phase branches, no merging. Commit often, small, with
