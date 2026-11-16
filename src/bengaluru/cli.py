@@ -54,6 +54,12 @@ def run_build(area: Area) -> None:
     build(area)
 
 
+def run_night(area: Area, window: str | None) -> None:
+    from bengaluru.night import NIGHT_WINDOW, night
+
+    night(area, window or NIGHT_WINDOW)
+
+
 def run_tile(area: Area) -> None:
     from bengaluru.tile import tile
 
@@ -78,5 +84,12 @@ def main() -> None:
     commands = parser.add_subparsers(dest="stage", required=True)
     for stage in STAGES:
         commands.add_parser(stage).add_argument("--area", required=True)
+    # The night's work takes a window as well; the default is the one in docs/DECISIONS.md.
+    night = commands.add_parser("night")
+    night.add_argument("--area", required=True)
+    night.add_argument("--window", metavar="HH:MM-HH:MM")
     args = parser.parse_args()
-    STAGES[args.stage](get_area(args.area))
+    if args.stage == "night":
+        run_night(get_area(args.area), args.window)
+    else:
+        STAGES[args.stage](get_area(args.area))

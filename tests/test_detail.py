@@ -23,6 +23,8 @@ from bengaluru.detail import (
     detail_colors,
     frames_dir,
     manifest_path,
+    missing_cells,
+    open_frames_dir,
     render_detail,
     render_frame,
     view_projection,
@@ -116,3 +118,21 @@ def test_low_house_veranda_reaches_past_the_plain_roof():
     _paint_low_house(ImageDraw.Draw(with_veranda), view, polygon, 9.0, 1, 2)
     plain_area = int((np.asarray(plain) != background).sum())
     assert int((np.asarray(with_veranda) != background).sum()) > plain_area
+
+
+def test_frames_on_disk_are_not_drawn_again(tmp_path):
+    directory = tmp_path / "frames-315"
+    open_frames_dir(directory, "first")
+    (directory / "000_001.png").write_bytes(b"frame")
+    cells = [(0, 0), (1, 0), (0, 1)]
+    assert missing_cells(directory, cells) == [(0, 0), (0, 1)]
+    open_frames_dir(directory, "first")
+    assert missing_cells(directory, cells) == [(0, 0), (0, 1)]
+
+
+def test_frames_from_other_inputs_are_thrown_away(tmp_path):
+    directory = tmp_path / "frames-315"
+    open_frames_dir(directory, "first")
+    (directory / "000_001.png").write_bytes(b"frame")
+    open_frames_dir(directory, "second")
+    assert missing_cells(directory, [(1, 0)]) == [(1, 0)]

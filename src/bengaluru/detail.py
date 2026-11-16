@@ -1,9 +1,11 @@
 """Near-final styling, for one frame or a whole area, a frame at a time."""
 
 import datetime as dt
+import hashlib
 import json
 import math
 import multiprocessing
+import shutil
 import time
 import zlib
 from dataclasses import dataclass, replace
@@ -58,6 +60,8 @@ DETAIL_VIEWS = ("315", "0")
 SPRITE_DIR = Path("assets/sprites")
 LANDMARKS_PATH = Path("assets/landmarks.json")
 TRANSPARENT = 255
+# Kept in a view's frame folder: a hash of what its frames were drawn from.
+FINGERPRINT = "FINGERPRINT"
 
 _EXTRA = (
     *(f"roof_shade_{index}" for index in range(6)),
@@ -1035,7 +1039,10 @@ def load_scene(area: Area, use_cached_trees: bool = False) -> Scene:
 def save_slots(slots: np.ndarray, path: Path) -> None:
     image = Image.fromarray(slots, mode="P")
     image.putpalette(detail_lookup())
-    image.save(path, optimize=True)
+    # Written beside the target and renamed, so a frame on disk is always a whole frame.
+    partial = path.with_name(path.name + ".part")
+    image.save(partial, format="PNG", optimize=True)
+    partial.replace(path)
 
 
 def detail(area: Area) -> None:
@@ -1076,6 +1083,36 @@ def manifest_path(area: Area, view: str = DEFAULT_VIEW) -> Path:
     return Path("out") / area.name / name
 
 
+def frame_path(directory: Path, column: int, row: int) -> Path:
+    return directory / f"{row:03d}_{column:03d}.png"
+
+
+def frames_fingerprint(area: Area, canvas: Viewport) -> str:
+    """Return a hash of what decides a view's frames: the data, the canvas, and the renderer."""
+    stat = derived_path(area).stat()
+    digest = hashlib.blake2b(f"{canvas}:{stat.st_size}:{stat.st_mtime_ns}".encode(), digest_size=8)
+    sources = [*Path(__file__).parent.glob("*.py"), LANDMARKS_PATH, *SPRITE_DIR.glob("*")]
+    for path in sorted(sources):
+        if path.is_file():
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def open_frames_dir(directory: Path, fingerprint: str) -> None:
+    """Make a view's frame folder, emptying it first if its frames came from other inputs."""
+    record = directory / FINGERPRINT
+    if directory.exists() and not (record.exists() and record.read_text() == fingerprint):
+        shutil.rmtree(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    record.write_text(fingerprint)
+
+
+def missing_cells(directory: Path, cells: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    return [
+        (column, row) for column, row in cells if not frame_path(directory, column, row).exists()
+    ]
+
+
 def frame_view(canvas: Viewport, column: int, row: int) -> Viewport:
     """Return a frame's view, including its apron, cut from the global canvas."""
     return Viewport(
@@ -1094,19 +1131,24 @@ def render_frame(scene: Scene, canvas: Viewport, column: int, row: int) -> np.nd
 _worker: dict = {}
 
 
-def _init_worker(area: Area, canvas: Viewport, view: str) -> None:
+def _init_worker(area: Area, canvas: Viewport, view: str, deadline: float | None) -> None:
     use_view(view)
     _worker["scene"] = load_scene(area, use_cached_trees=True)
     _worker["canvas"] = canvas
     _worker["area"] = area
     _worker["view"] = view
+    _worker["deadline"] = deadline
 
 
-def _render_and_save(cell: tuple[int, int]) -> tuple[int, int]:
+def _render_and_save(cell: tuple[int, int]) -> bool:
+    """Draw one frame and return True, or return False without drawing once past the deadline."""
+    deadline = _worker["deadline"]
+    if deadline is not None and time.time() >= deadline:
+        return False
     column, row = cell
     slots = render_frame(_worker["scene"], _worker["canvas"], column, row)
-    save_slots(slots, frames_dir(_worker["area"], _worker["view"]) / f"{row:03d}_{column:03d}.png")
-    return cell
+    save_slots(slots, frame_path(frames_dir(_worker["area"], _worker["view"]), column, row))
+    return True
 
 
 def frame_grid(canvas: Viewport) -> tuple[int, int]:
@@ -1155,21 +1197,35 @@ def plan_view(area: Area, scene: Scene, view: str) -> None:
 
 
 def _render_view(
-    area: Area, scene: Scene, view: str, only: list[tuple[int, int]] | None = None
-) -> None:
+    area: Area,
+    scene: Scene,
+    view: str,
+    only: list[tuple[int, int]] | None = None,
+    deadline: float | None = None,
+) -> bool:
+    """Draw the view's frames that are not on disk yet and return whether all of them now are.
+
+    Past the deadline, an epoch time, no new frame starts; the ones being drawn finish.
+    """
     started = time.perf_counter()
     projection = view_projection(view)
     canvas = full_viewport(projection, scene.layers)
     columns, rows = frame_grid(canvas)
-    print(f"{view}: {columns} x {rows} frames")
     directory = frames_dir(area, view)
-    directory.mkdir(parents=True, exist_ok=True)
-    cells = only or [(column, row) for row in range(rows) for column in range(columns)]
-    context = multiprocessing.get_context("spawn")
-    with context.Pool(WORKERS, _init_worker, (area, canvas, view)) as pool:
-        for count, _ in enumerate(pool.imap_unordered(_render_and_save, cells), 1):
-            if count % 10 == 0 or count == len(cells):
-                print(
-                    f"{count}/{len(cells)} frames, {time.perf_counter() - started:.0f}s", flush=True
-                )
+    open_frames_dir(directory, frames_fingerprint(area, canvas))
+    every = [(column, row) for row in range(rows) for column in range(columns)]
+    cells = only or missing_cells(directory, every)
+    print(f"{view}: {columns} x {rows} frames, {len(cells)} to draw", flush=True)
+    if cells:
+        context = multiprocessing.get_context("spawn")
+        with context.Pool(WORKERS, _init_worker, (area, canvas, view, deadline)) as pool:
+            drawn = 0
+            for count, done in enumerate(pool.imap_unordered(_render_and_save, cells), 1):
+                drawn += done
+                if done and (drawn % 10 == 0 or count == len(cells)):
+                    print(
+                        f"{drawn}/{len(cells)} frames, {time.perf_counter() - started:.0f}s",
+                        flush=True,
+                    )
     plan_view(area, scene, view)
+    return not missing_cells(directory, every)

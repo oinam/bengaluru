@@ -3,6 +3,7 @@
 import hashlib
 import json
 import shutil
+import time
 from pathlib import Path
 
 import geopandas as gpd
@@ -206,10 +207,17 @@ def tile(area: Area) -> None:
     _write_indexes(area, target, views)
 
 
-def build(area: Area, only: list[str] | None = None) -> None:
+def _past(deadline: float | None) -> bool:
+    return deadline is not None and time.time() >= deadline
+
+
+def build(area: Area, only: list[str] | None = None, deadline: float | None = None) -> bool:
     """Render and tile one view at a time, then delete its frames, so the disk never holds
-    more than the finished tiles and one view's frames. Picks up after the last finished
-    view if stopped."""
+    more than the finished tiles and one view's frames. Returns whether the map is built.
+
+    Stopped, it picks up at the first frame that is not on disk. Past the deadline, an epoch
+    time, no frame and no pyramid starts; a pyramid already being written is finished.
+    """
     target = tiles_dir(area)
     target.mkdir(parents=True, exist_ok=True)
     record = target / VIEWS_RECORD
@@ -218,14 +226,20 @@ def build(area: Area, only: list[str] | None = None) -> None:
     for view in only or RENDERED_VIEWS:
         if view in views:
             continue
+        if _past(deadline):
+            return False
         if scene is None:
             scene = load_scene(area)
             np.save(trees_path(area), scene.trees)
-        _render_view(area, scene, view)
+        if not _render_view(area, scene, view, deadline=deadline) or _past(deadline):
+            print(f"{view}: stopped at the deadline; the next run carries on from here")
+            return False
         views[view] = _view_entry(area, view, target)
         record.write_text(json.dumps(views, indent=2) + "\n")
         shutil.rmtree(frames_dir(area, view))
-    if all(view in views for view in RENDERED_VIEWS):
+    finished = all(view in views for view in RENDERED_VIEWS)
+    if finished:
         if not manifest_path(area).exists():
             plan_view(area, scene or load_scene(area), DEFAULT_VIEW)
         _write_indexes(area, target, {view: views[view] for view in RENDERED_VIEWS})
+    return finished
