@@ -5,12 +5,13 @@ behind `wrangler r2 bulk put`, has no limit of a few requests a second. rclone l
 the bucket already has and sends only what is missing, so a stopped run picks up where it
 left off; each pyramid is recorded once it is complete. The index files go last, so the
 manifest never names a pyramid R2 does not have yet. Only the pyramids of views the build
-has recorded as finished go up, so it is safe to run while `bengaluru build` is still
-working. With --pyramids-only it stops before the index files, which switch the live site
-over; send those once the code that reads them is deployed. With --until=HH:MM it starts
-no new pyramid after that local time. With --prune it then removes from R2 the pyramids
-the manifest no longer names: a rebuild of the whole city leaves 4 GB of them, and the
-bucket shares R2's free 10 GB with the Manipur map's.
+has recorded as finished go up, and not those of a view it is about to draw again, so it
+is safe to run while `bengaluru build` is still working or has stopped partway. With
+--pyramids-only it stops before the index files, which switch the live site over; send
+those once the code that reads them is deployed. With --until=HH:MM it starts no new
+pyramid after that local time. With --prune it then removes from R2 the pyramids the
+manifest no longer names: a rebuild of the whole city leaves 4 GB of them, and the bucket
+shares R2's free 10 GB with the Manipur map's.
 
 Needs R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in .env: an R2 API token with Object Read
 & Write on the bucket.
@@ -22,6 +23,9 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from bengaluru.areas import get_area
+from bengaluru.detail import frames_fingerprint
 
 BUCKET = "bengaluru-tiles"
 ACCOUNT_ID = "091e65b116deac24fcc274459b6fbde0"
@@ -118,7 +122,10 @@ def main() -> None:
     stop = deadline()  # before touching the drive, so a slow first read can't move it a day
     env = rclone_env()
     done = set(json.loads(DONE.read_text())) if DONE.exists() else set()
-    finished = {view["pyramid"] for view in json.loads(VIEWS_RECORD.read_text()).values()}
+    # A view drawn from older data or drawing code is due to be drawn again; skip it.
+    inputs = frames_fingerprint(get_area(AREA))
+    views = json.loads(VIEWS_RECORD.read_text()).values()
+    finished = {view["pyramid"] for view in views if view.get("inputs") == inputs}
     for pyramid in sorted((TILES / "pyramid").iterdir()):
         if pyramid.name in done or pyramid.name not in finished:
             continue
