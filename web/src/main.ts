@@ -35,6 +35,8 @@ const NEAR_PLACE_MAX_PX = 800;
 // Vidhana Soudha, with Cubbon Park below it.
 const OPENING_VIEW: Target = { lon: 77.5906, lat: 12.9785, zoom: 0.5, view: NORTH_UP_VIEW };
 const SHORTCUT_ZOOM = 0.9;
+const AREA_ZOOM = 0.4;
+const SUBURB_ZOOM = 0.25;
 const ZOOM_STEP = 1.6;
 // A key press moves the map this fraction of the screen.
 const PAN_STEP = 0.15;
@@ -53,10 +55,21 @@ const PAN_KEYS: Record<string, [number, number]> = {
 // centers of the places as OpenStreetMap maps them.
 const SHORTCUTS: [string, number, number, number][] = [
   ["Vidhana Soudha", 77.59062, 12.97975, SHORTCUT_ZOOM],
-  ["High Court", 77.59252, 12.97807, SHORTCUT_ZOOM],
-  ["Cubbon Park", 77.59219, 12.97425, 0.4],
-  ["Chinnaswamy Stadium", 77.59958, 12.97881, SHORTCUT_ZOOM],
-  ["UB City", 77.59611, 12.97233, SHORTCUT_ZOOM],
+  ["Cubbon Park", 77.59219, 12.97425, AREA_ZOOM],
+  ["MG Road", 77.61008, 12.97489, SHORTCUT_ZOOM],
+  ["Ulsoor Lake", 77.61917, 12.98239, AREA_ZOOM],
+  ["Bangalore Palace", 77.59201, 12.9986, SHORTCUT_ZOOM],
+  ["Majestic", 77.57229, 12.97805, SHORTCUT_ZOOM],
+  ["KR Market", 77.57745, 12.96396, SHORTCUT_ZOOM],
+  ["Lalbagh", 77.58691, 12.94886, AREA_ZOOM],
+  ["Bull Temple", 77.56873, 12.94176, SHORTCUT_ZOOM],
+  ["Sankey Tank", 77.57379, 13.00999, AREA_ZOOM],
+  ["IISc", 77.56569, 13.0194, AREA_ZOOM],
+  ["ISKCON", 77.55114, 13.00994, SHORTCUT_ZOOM],
+  ["Malleswaram", 77.5669, 13.00168, SUBURB_ZOOM],
+  ["Indiranagar", 77.63866, 12.97833, SUBURB_ZOOM],
+  ["Koramangala", 77.62152, 12.93979, SUBURB_ZOOM],
+  ["Jayanagar", 77.58015, 12.92951, SUBURB_ZOOM],
 ];
 
 function byId<T extends HTMLElement>(id: string, type: new () => T): T {
