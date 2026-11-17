@@ -136,7 +136,7 @@ CEMETERY_GRAVE_M = 4.0
 FRAME_PX = 2048
 # Wider than the tallest building's lift, the ground blur, and any sprite, so frames join exactly.
 APRON_PX = 256
-WORKERS = 5
+WORKERS = 6
 PADDY_ANGLE = math.radians(17)
 PADDY_LENGTH_M = 44.0
 PADDY_WIDTH_M = 28.0
@@ -826,6 +826,8 @@ class Scene:
     # Track on the ground, and the viaducts cut into spans of (track, deck).
     rails: gpd.GeoDataFrame
     spans: list[tuple[LineString, shapely.Polygon]]
+    # The derived data to read each frame's buildings from, when they are not held in memory.
+    buildings_from: Path | None = None
 
 
 RADIUS_PX = (6, 7, 8, 9, 10, 12)
@@ -959,16 +961,29 @@ def _select(frame: gpd.GeoDataFrame, index: shapely.STRtree, quad) -> gpd.GeoDat
     return frame.iloc[np.unique(index.query(quad, predicate="intersects"))]
 
 
+def _read_buildings(path: Path, quad: shapely.Polygon) -> gpd.GeoDataFrame:
+    """Read the buildings a view can see from the derived data, through its spatial index."""
+    frame = pyogrio.read_dataframe(
+        path, layer="buildings", bbox=quad.bounds, columns=["building_id", "height_m"]
+    )
+    seen = shapely.intersects(np.asarray(frame.geometry.values), quad)
+    return frame[seen].sort_values("building_id")
+
+
 def _local_layers(scene: Scene, quad: shapely.Polygon) -> Layers:
     """Return only the features a view can see."""
     layers = scene.layers
+    if scene.buildings_from:
+        buildings = _read_buildings(scene.buildings_from, quad)
+    else:
+        buildings = _select(layers.buildings, scene.indexes["buildings"], quad)
     return Layers(
         layers.patch,
         _select(layers.ground, scene.indexes["ground"], quad),
         _select(layers.water, scene.indexes["water"], quad),
         _select(layers.waterways, scene.indexes["waterways"], quad),
         _select(layers.roads, scene.indexes["roads"], quad),
-        _select(layers.buildings, scene.indexes["buildings"], quad),
+        buildings,
     )
 
 
@@ -1129,11 +1144,35 @@ def trees_path(area: Area) -> Path:
     return Path("data/derived") / f"{area.name}_trees.npy"
 
 
-def load_scene(area: Area, use_cached_trees: bool = False) -> Scene:
-    layers = load_layers(area)
+def _load_layers_without_buildings(area: Area) -> Layers:
+    path = derived_path(area)
+    names = ("patch", "ground", "water", "waterways", "roads")
+    frames = {name: gpd.read_file(path, layer=name) for name in names}
+    patch = frames.pop("patch").geometry.iloc[0]
+    none = gpd.GeoDataFrame({"building_id": [], "height_m": []}, geometry=[], crs=METRIC_CRS)
+    return Layers(patch=patch, buildings=none, **frames)
+
+
+def load_scene(
+    area: Area, use_cached_trees: bool = False, buildings_by_frame: bool = False
+) -> Scene:
+    """Load what every frame of the area shares.
+
+    A city's buildings take gigabytes in every process that holds them, so a render
+    worker passes `buildings_by_frame` and reads each frame's buildings as it draws it.
+    That needs the cached trees: placing trees needs every building.
+    """
+    layers = _load_layers_without_buildings(area) if buildings_by_frame else load_layers(area)
     surfaces = _load_surfaces(area)
     landmarks = load_landmarks()
     trees = np.load(trees_path(area)) if use_cached_trees else None
+    scene = _build_area_scene(area, layers, surfaces, landmarks, trees)
+    if buildings_by_frame:
+        scene.buildings_from = derived_path(area)
+    return scene
+
+
+def _build_area_scene(area, layers, surfaces, landmarks, trees) -> Scene:
     return build_scene(
         layers,
         _load_tree_rows(area),
@@ -1247,7 +1286,7 @@ _worker: dict = {}
 
 def _init_worker(area: Area, canvas: Viewport, view: str, deadline: float | None) -> None:
     use_view(view)
-    _worker["scene"] = load_scene(area, use_cached_trees=True)
+    _worker["scene"] = load_scene(area, use_cached_trees=True, buildings_by_frame=True)
     _worker["canvas"] = canvas
     _worker["area"] = area
     _worker["view"] = view
