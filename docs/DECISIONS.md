@@ -290,3 +290,31 @@ to the palette or the building types.
 
 This changes `detail.py`, so every built view is stale and is drawn again: central the
 same day, BBMP from the same day into the night.
+
+## 2026-11-17 — bengaluru.oinam.com, deployed on push
+
+Brajeshwar chose `bengaluru.oinam.com` and asked for the site to deploy when `main` is
+pushed. It is the Manipur map's arrangement, less its Worker code:
+
+- **The viewer is a Worker of static assets only**, `bengaluru` in the Oinam account,
+  with the domain attached by Wrangler (`web/wrangler.jsonc`). There is no server code,
+  since this map has no aircraft feed.
+- **GitHub Actions deploys it** (`.github/workflows/ci.yml`): lint and tests, then
+  `pnpm run deploy`, on every push to `main`, with a Cloudflare API token as a
+  repository secret. So a push is a publication, and `CLAUDE.md` says so.
+- **The tiles and their indexes are on R2**, bucket `bengaluru-tiles`, served from
+  `bengaluru-tiles.oinam.com`, one level under `oinam.com` for the same certificate
+  reason as Manipur's. GitHub cannot render the map; `tools/upload_tiles.py` sends the
+  pyramids from this Mac with rclone, and the index files last, which is what switches
+  the live map over.
+- **Only BBMP goes online.** Central is inside it and stays a local build.
+- **`--prune` is new.** R2's free 10 GB is shared with Manipur's 3.8 GB, and each
+  rebuild of BBMP is another 4 GB of pyramids under new names. After the index files
+  are up, `--prune` removes the pyramids the manifest no longer names. It is not the
+  default: it deletes from R2, so it runs when asked.
+- **The bucket's CORS rules are a file**, `web/r2-cors.json`, so the bucket can be made
+  again from the repository. The viewer reads tile pixels for the water and fetches the
+  indexes, both across origins.
+
+The upload is not part of the night's work. Sending the index files publishes, and
+that waits for Brajeshwar's word, as a push does.

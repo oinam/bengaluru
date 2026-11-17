@@ -15,6 +15,23 @@ choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
 candidate answers to its first items. Phase 0's frames of the test patch are in
 `out/vidhana-soudha/`.*
 
+### Before the first deploy
+
+The deploy is written (2026-11-17) and nothing is online. In order:
+
+1. An R2 bucket `bengaluru-tiles`, served at `bengaluru-tiles.oinam.com`, with the CORS
+   rules in `web/r2-cors.json`.
+2. An R2 API token with Object Read & Write on that bucket, in `.env` (see
+   `.env.example`).
+3. `mise run upload`, once the night has finished BBMP's courtyards: about 4 GB in
+   53,000 files.
+4. A `CLOUDFLARE_API_TOKEN` secret on the GitHub repository, allowed to edit Workers in
+   the Oinam account.
+5. A push to `main`. The first one makes the Worker and attaches the domain.
+
+Brajeshwar's to settle before it is public: the license shown for the rendered map, the
+footer's wording, and the Go to list, all still Manipur's placeholders.
+
 ### BBMP numbers, 2026-11-17
 
 The `bbmp` area: 12.83–13.14 N, 77.46–77.78 E, 34.7 × 34.3 km, about 1,190 km².
@@ -285,8 +302,8 @@ Stop, or re-scope, if any of these happens:
 
 1. ~~Go or not, and when.~~ Go, 2026-11-16.
 2. ~~Name.~~ "Bengaluru - 3D Isometric Map" is the site's name and title, 2026-11-16.
-3. Domain, for example `bengaluru.oinam.com`, and whether a push to `main` deploys, as
-   in Manipur.
+3. ~~Domain, and whether a push to `main` deploys.~~ `bengaluru.oinam.com`, and a push
+   deploys, as in Manipur, 2026-11-17.
 4. ~~GitHub remote.~~ `git@github.com:oinam/bengaluru.git`, 2026-11-16. Nothing is
    pushed yet.
 5. ~~Reuse.~~ Copied the Manipur pipeline in, 2026-11-16.

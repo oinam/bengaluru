@@ -6,7 +6,8 @@ https://manipur.oinam.com), and it starts from that project's pipeline and lesso
 
 **Status: the whole city is built.** Brajeshwar said go on 2026-11-17, and the central
 area and then the BBMP area were built that day, four views each; the viewer opens on
-BBMP. Nothing is online. The look is still Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
+BBMP. Nothing is online yet; the deploy to bengaluru.oinam.com is written and waits on
+the Cloudflare side. The look is still Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
 Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
@@ -94,6 +95,10 @@ mise run dev [area]                             # serves the viewer at http://lo
 mise run build [area]                           # type-checks and builds the viewer into web/dist, with the area's tiles linked in
 mise run preview                                # serves the built viewer at http://localhost:8654
 pnpm --dir web lint                             # type-checks, lints, and checks the viewer's formatting
+mise run upload [area]                          # uploads an area's finished tile pyramids (default bbmp), then its index files, to R2 with rclone; needs the R2 keys in .env
+uv run python tools/upload_tiles.py --pyramids-only   # the pyramids alone; safe mid-build, and does not change the live site
+uv run python tools/upload_tiles.py --prune     # after the upload, removes from R2 the pyramids the manifest no longer names
+pnpm --dir web run deploy                       # publishes the viewer by hand; a push to main does it too
 mise run schedule-on                            # installs the launchd agent that starts `mise run night` at 23:00; logs to logs/night.log
 mise run schedule-off                           # removes the agent
 uv run pytest                                   # runs the tests
@@ -115,8 +120,15 @@ it. A one-off script that renders frames must be a file with an `if __name__ ==
 
 Work directly on `main`; no phase branches, no merging. Commit often, small, with
 messages that say what changed in the picture. Never force-push. Do not push unless
-asked. Remote: `git@github.com:oinam/bengaluru.git`. Whether a push deploys is an open
-decision in `docs/PLAN.md`.
+asked. Remote: `git@github.com:oinam/bengaluru.git`.
+
+**A push to `main` publishes the site.** Once lint and tests pass, GitHub Actions
+deploys the viewer to bengaluru.oinam.com. So asking to push is asking to publish. Map
+data is separate: the tiles and their indexes are on R2 at bengaluru-tiles.oinam.com,
+sent by `mise run upload` from this Mac. After a re-render, upload before pushing, so R2
+has the new pyramids and indexes when the code arrives. Uploading the index files
+changes the live map by itself, with no push, so it needs Brajeshwar's word as a push
+does. What is still to be set up before the first deploy is in `docs/PLAN.md`.
 
 ## /odo
 
