@@ -1,7 +1,8 @@
 """Lay the site's four views of an area side by side, from the finished tile pyramids.
 
-Each view is shown whole, at a quarter of full size, labeled with the compass point at the
-top of the picture. It reads only the rendered tiles, so run `bengaluru build` first.
+Each view is shown whole, at the largest scale that keeps it under 4,608 px wide, labeled
+with the compass point at the top of the picture. It reads only the rendered tiles, so
+run `bengaluru build` first.
 Writes out/<area>/<stamp>_four-views.png.
 """
 
@@ -14,8 +15,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 AREA = sys.argv[1] if len(sys.argv) > 1 else "vidhana-soudha"
 TILE = 512
-# Two levels below full size is a quarter scale.
-LEVELS_DOWN = 2
+# The widest a view is drawn, so the sheet of four opens in an ordinary image viewer.
+VIEW_PX = 4608
 GAP = 24
 TITLE = 44
 BACKGROUND = "#1f2a2e"
@@ -30,7 +31,14 @@ def compass(matrix: list[float]) -> str:
 
 
 def whole_view(files: Path) -> Image.Image:
-    level = max(int(path.name) for path in files.iterdir() if path.name.isdigit()) - LEVELS_DOWN
+    level = max(int(path.name) for path in files.iterdir() if path.name.isdigit())
+    # Each level down halves the picture; a level of one column is as far as this goes.
+    while (
+        level > 0
+        and len({path.stem.split("_")[0] for path in (files / str(level)).glob("*.webp")})
+        > VIEW_PX // TILE
+    ):
+        level -= 1
     tiles = {
         tuple(int(part) for part in path.stem.split("_")): path
         for path in (files / str(level)).glob("*.webp")
