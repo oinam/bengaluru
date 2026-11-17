@@ -4,10 +4,14 @@
 
 *17 November 2026. Brajeshwar said go: build the whole city. It is built. The central
 area finished at 08:59 and the BBMP area at 11:42, four views each, and the viewer opens
-on BBMP (`mise run dev`, http://localhost:8655). The night's work at 23:00 now finds both
-current and builds a view again only after the data or the drawing code changes. Nothing
-is online. The look is still Manipur's, unchanged; "What looks wrong" below is the list
-to choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
+on BBMP (`mise run dev`, http://localhost:8655). Courtyards were then opened in the
+drawing code, which made every view stale: central was drawn again by 12:19, and BBMP
+got two of its four views done before the day's window closed at 13:40. The night's work
+at 23:00 draws the other two, about 70 minutes, and only then does the viewer change
+over; until then it shows the first BBMP build, whole, with the lids. After that the
+night builds a view again only when the data or the drawing code changes. Nothing is
+online. The look is still Manipur's, unchanged; "What looks wrong" below is the list to
+choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
 candidate answers to its first items. Phase 0's frames of the test patch are in
 `out/vidhana-soudha/`.*
 
@@ -70,7 +74,7 @@ The `central` area: 12.90–13.05 N, 77.52–77.68 E, 17.4 × 16.6 km, 288 km².
 | Tiles on disk | 978 MB in 13,555 files |
 
 The render workers hold 1.0 to 1.6 GB each whatever the area's size, since each reads
-its frame's buildings from disk. `20261117-114350_four-views.png` in `out/central/` shows
+its frame's buildings from disk. `20261117-121949_four-views.png` in `out/central/` shows
 the four views side by side.
 
 ### Phase 0 numbers, 2026-11-16
