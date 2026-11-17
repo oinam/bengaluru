@@ -19,6 +19,10 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
+# node
+node_modules/
+web/dist/
+
 # secrets
 .env
 .env.*

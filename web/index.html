@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bengaluru - 3D Isometric Map</title>
+    <meta
+      name="description"
+      content="An isometric pixel-art map of Bengaluru, drawn from open data."
+    />
+    <meta property="og:title" content="Bengaluru - 3D Isometric Map" />
+    <meta property="og:site_name" content="Bengaluru - 3D Isometric Map" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:description"
+      content="An isometric pixel-art map of Bengaluru, drawn from open data."
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="map" aria-label="Zoomable isometric map of Bengaluru"></div>
+
+    <div class="tilt tilt-top" aria-hidden="true"></div>
+    <div class="tilt tilt-bottom" aria-hidden="true"></div>
+
+    <div class="panel search">
+      <input
+        id="search"
+        type="search"
+        placeholder="Search a place in Bengaluru"
+        autocomplete="off"
+        aria-label="Search places"
+      />
+      <ul id="results" hidden></ul>
+    </div>
+
+    <div class="panel controls">
+      <button id="zoom-in" type="button" aria-label="Zoom in" data-tip="Zoom in (+)">+</button>
+      <button id="zoom-out" type="button" aria-label="Zoom out" data-tip="Zoom out (−)">−</button>
+      <button
+        id="home"
+        type="button"
+        aria-label="Home: back to the city center"
+        data-tip="Home: back to the city center (H)"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 10.5 12 3l9 7.5" />
+          <path d="M5.5 9v11.5h13V9" />
+          <path d="M10 20.5v-6h4v6" />
+        </svg>
+      </button>
+      <button
+        id="rotate"
+        type="button"
+        aria-label="Rotate the view"
+        data-tip="Rotate the view (R; Shift or Alt reverses)"
+      >
+        ↻
+      </button>
+      <button id="compass" type="button" aria-label="Face north" data-tip="Face north (N)">
+        <span id="needle" class="needle" aria-hidden="true"></span>
+      </button>
+      <button
+        id="settings"
+        type="button"
+        aria-label="Settings"
+        data-tip="Settings"
+        aria-expanded="false"
+        aria-controls="settings-panel"
+      >
+        ⚙&#xFE0E;
+      </button>
+      <button
+        id="help"
+        type="button"
+        aria-label="Help and keyboard shortcuts"
+        data-tip="Help and keyboard shortcuts (?)"
+        aria-haspopup="dialog"
+        aria-controls="help-dialog"
+      >
+        ?
+      </button>
+    </div>
+
+    <section id="info" class="panel info" aria-label="Places to go to">
+      <div id="info-bar" class="info-bar" title="Drag to move; double-click to put back">
+        <span class="info-title">Go to</span>
+        <button id="info-collapse" class="collapse" type="button" aria-controls="shortcuts">
+          <span aria-hidden="true">▾</span>
+        </button>
+      </div>
+      <div id="shortcuts" class="shortcuts"></div>
+    </section>
+
+    <dialog id="help-dialog" class="help" aria-labelledby="help-title">
+      <div class="help-body">
+        <header>
+          <h2 id="help-title">Help</h2>
+          <form method="dialog">
+            <button class="close" type="submit" aria-label="Close">×</button>
+          </form>
+        </header>
+        <p>
+          An isometric pixel-art map of Bengaluru, drawn by code from open data. Drag to move,
+          scroll or pinch to zoom, and share the address bar to share the exact view.
+        </p>
+        <h3>Keyboard</h3>
+        <dl class="keys">
+          <dt>
+            <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> or <kbd>W</kbd> <kbd>A</kbd>
+            <kbd>S</kbd> <kbd>D</kbd>
+          </dt>
+          <dd>Move the map</dd>
+          <dt><kbd>+</kbd> <kbd>−</kbd></dt>
+          <dd>Zoom in and out</dd>
+          <dt><kbd>R</kbd>, <kbd>Shift</kbd> <kbd>R</kbd></dt>
+          <dd>Turn the view a quarter turn, or back</dd>
+          <dt><kbd>N</kbd></dt>
+          <dd>Face north</dd>
+          <dt><kbd>H</kbd> or <kbd>0</kbd></dt>
+          <dd>Home: back to the city center</dd>
+          <dt><kbd>/</kbd></dt>
+          <dd>Search a place</dd>
+          <dt><kbd>I</kbd></dt>
+          <dd>Collapse or expand the Go to panel</dd>
+          <dt><kbd>?</kbd></dt>
+          <dd>Open or close this help</dd>
+          <dt><kbd>Esc</kbd></dt>
+          <dd>Close a panel or this help</dd>
+        </dl>
+        <h3>Good to know</h3>
+        <ul>
+          <li>
+            Buildings, roofs, and trees are drawn from open data, so details may be wrong. Use
+            Suggest a correction at the bottom right to report one.
+          </li>
+          <li>
+            Drag the Go to panel by its top bar to move it; double-click the bar to put it back.
+          </li>
+          <li>Water and other animation can be turned off in Settings (⚙).</li>
+        </ul>
+        <p><a href="/about.html">How this map was made, and full credits</a></p>
+      </div>
+    </dialog>
+
+    <div id="settings-panel" class="panel settings" hidden>
+      <label><input id="animation" type="checkbox" /> Animation</label>
+    </div>
+
+    <footer class="panel credits">
+      <span class="disclaimer"
+        >Drawn by AI code from open data; may be inaccurate — by
+        <a href="https://brajeshwar.com">brajeshwar.com</a></span
+      >
+      <a
+        id="correction"
+        class="correction"
+        href="https://github.com/oinam/bengaluru/issues/new"
+        target="_blank"
+        rel="noopener"
+        >Suggest a correction</a
+      >
+      <details>
+        <summary>Credits</summary>
+        <div class="credits-body">
+          <p>
+            Rendered map <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+            Drawn by code from open data; no photographs are used. Tree positions, roof types, and
+            windows are illustrative.
+          </p>
+          <ul>
+            <li>
+              © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>
+            </li>
+            <li>Google Open Buildings, CC BY 4.0</li>
+            <li>
+              Google Open Buildings 2.5D Temporal, CC BY 4.0. Contains modified Copernicus Sentinel
+              data
+            </li>
+            <li>
+              © ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021)
+              processed by ESA WorldCover consortium
+            </li>
+          </ul>
+          <p><a href="/about.html">Full credits and how this map was made</a></p>
+        </div>
+      </details>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

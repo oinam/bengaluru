@@ -1,0 +1,525 @@
+:root {
+  --bg: #1f2a2e;
+  --panel: rgba(31, 42, 46, 0.92);
+  --ink: #f0ece2;
+  --muted: #b8bdb9;
+  --accent: #c9744a;
+  --line: rgba(240, 236, 226, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    15px/1.45 system-ui,
+    sans-serif;
+}
+
+#map {
+  position: fixed;
+  inset: 0;
+}
+
+.panel {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.search {
+  top: 16px;
+  left: 50%;
+  width: min(340px, calc(100vw - 32px));
+  overflow: hidden;
+  border-radius: 20px;
+  transform: translateX(-50%);
+}
+
+#search {
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+/* The panel clips at its rounded edge, so the focus ring is drawn inside it. */
+#search:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Centered, the search would run under the controls, so it sits beside them. */
+@media (max-width: 520px) {
+  .search {
+    right: 66px;
+    left: 16px;
+    width: auto;
+    transform: none;
+  }
+}
+
+#search:focus-visible,
+button:focus-visible,
+.credits summary:focus-visible,
+#results button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#results {
+  max-height: min(50vh, 340px);
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+#results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#results button:hover {
+  background: var(--line);
+}
+
+#results small {
+  color: var(--muted);
+}
+
+.controls {
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 19px;
+  cursor: pointer;
+}
+
+.controls button[aria-expanded="true"] {
+  color: #8db9cd;
+}
+
+.controls button + button {
+  border-top: 1px solid var(--line);
+}
+
+.controls button {
+  position: relative;
+}
+
+.controls svg {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Each tool names itself and its key to the left of the column, on hover or keyboard focus. */
+.controls button[data-tip]::after {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  padding: 4px 9px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  content: attr(data-tip);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.12s;
+  white-space: nowrap;
+}
+
+.controls button[data-tip]:hover::after,
+.controls button[data-tip]:focus-visible::after {
+  opacity: 1;
+  transition-delay: 0.25s;
+}
+
+@media (hover: none) {
+  .controls button[data-tip]::after {
+    display: none;
+  }
+}
+
+.needle {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 22px;
+  vertical-align: middle;
+  background: linear-gradient(to bottom, var(--accent) 50%, var(--ink) 50%);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  transition: transform 0.3s;
+}
+
+.info {
+  bottom: 16px;
+  left: 16px;
+  width: min(340px, calc(100vw - 32px));
+  background: rgba(31, 42, 46, 0.62);
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+}
+
+.info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The bar is the panel's handle. */
+.info-bar {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.info.dragging .info-bar {
+  cursor: grabbing;
+}
+
+.info.collapsed .info-bar {
+  padding-bottom: 4px;
+  border-bottom: 0;
+}
+
+.info-title {
+  padding: 4px 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.info .collapse {
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.info .collapse span {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.info.collapsed .collapse span {
+  transform: rotate(180deg);
+}
+
+.shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.shortcuts button {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.shortcuts button:hover {
+  background: var(--line);
+}
+
+/* The footer wraps on narrow screens, so the panel sits above it. */
+@media (max-width: 700px) {
+  .info {
+    right: 66px;
+    bottom: 64px;
+    width: auto;
+  }
+}
+
+/* Once dragged, the panel is placed by its left and bottom edges alone. */
+.info.moved {
+  right: auto;
+  width: min(340px, calc(100vw - 32px));
+}
+
+.settings {
+  z-index: 1;
+  top: 221px;
+  right: 66px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings input {
+  margin: 0;
+  accent-color: #8db9cd;
+}
+
+.credits {
+  right: 16px;
+  bottom: 16px;
+  left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  max-width: calc(100vw - 32px);
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.credits summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.credits .disclaimer {
+  color: var(--muted);
+}
+
+/* The full credits open above the footer, so the footer itself stays one line. */
+.credits .credits-body {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: min(520px, calc(100vw - 32px));
+  padding: 4px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.credits p,
+.credits ul {
+  margin: 8px 0;
+}
+
+.credits ul {
+  padding-left: 18px;
+}
+
+.credits a {
+  color: var(--ink);
+}
+
+.tilt {
+  position: fixed;
+  right: 0;
+  left: 0;
+  height: 24vh;
+  opacity: var(--tilt, 0);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+
+.tilt-top {
+  top: 0;
+  mask-image: linear-gradient(to bottom, #000 25%, transparent);
+}
+
+.tilt-bottom {
+  bottom: 0;
+  mask-image: linear-gradient(to top, #000 25%, transparent);
+}
+
+.label {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-shadow:
+    -1px -1px 0 var(--bg),
+    1px -1px 0 var(--bg),
+    -1px 1px 0 var(--bg),
+    1px 1px 0 var(--bg);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.label-1 {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* OpenSeadragon sets display inline on every overlay, so hiding one needs !important. */
+.rivers {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.river {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: #cfe8f2;
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.label[hidden] {
+  display: none !important;
+}
+
+.marker {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: rgba(201, 116, 74, 0.28);
+  pointer-events: none;
+}
+
+.water,
+.still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.help {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.help::backdrop {
+  background: rgba(10, 14, 16, 0.5);
+}
+
+.help-body {
+  padding: 4px 16px 12px;
+}
+
+.help header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.help h2 {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.help h3 {
+  margin: 14px 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.help p,
+.help ul {
+  margin: 8px 0;
+}
+
+.help ul {
+  padding-left: 18px;
+}
+
+.help a {
+  color: var(--ink);
+}
+
+.help .close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.keys dt {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.keys dd {
+  margin: 0;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--ink);
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+  text-align: center;
+}

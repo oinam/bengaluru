@@ -1,0 +1,23 @@
+{
+  "name": "bengaluru-viewer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "lint": "tsc --noEmit && eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "build": "tsc --noEmit && vite build && ln -sfn ../../out/${MAP_AREA:-central}/tiles dist/tiles"
+  },
+  "dependencies": {
+    "openseadragon": "5.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/openseadragon": "5.0.1",
+    "eslint": "9.39.5",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "7.1.12"
+  }
+}
