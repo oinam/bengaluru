@@ -2,13 +2,8 @@
   "rules": [
     {
       "allowed": {
-        "origins": [
-          "https://bengaluru.oinam.com",
-          "http://localhost:8654",
-          "http://localhost:8655"
-        ],
-        "methods": ["GET", "HEAD"],
-        "headers": ["*"]
+        "origins": ["https://bengaluru.oinam.com"],
+        "methods": ["GET", "HEAD"]
       },
       "maxAgeSeconds": 86400
     }

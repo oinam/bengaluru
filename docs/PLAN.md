@@ -19,8 +19,9 @@ candidate answers to its first items. Phase 0's frames of the test patch are in
 
 The deploy is written (2026-11-17) and nothing is online. In order:
 
-1. An R2 bucket `bengaluru-tiles`, served at `bengaluru-tiles.oinam.com`, with the CORS
-   rules in `web/r2-cors.json`.
+1. ~~An R2 bucket `bengaluru-tiles`, served at `bengaluru-tiles.oinam.com`, with the CORS
+   rules in `web/r2-cors.json`.~~ Made on 2026-11-17 with Wrangler, in APAC like
+   Manipur's, with the same rules: the site's origin, GET and HEAD.
 2. An R2 API token with Object Read & Write on that bucket, in `.env` (see
    `.env.example`).
 3. `mise run upload`, once the night has finished BBMP's courtyards: about 4 GB in
