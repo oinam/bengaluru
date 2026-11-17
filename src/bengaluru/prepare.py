@@ -46,6 +46,10 @@ ROAD_WIDTHS_M = {
     "steps": 1.5,
 }
 AIRFIELD_WIDTHS_M = {"runway": 45.0, "taxiway": 23.0}
+# Tracks that carry trains: the railways and the metro. Trams and abandoned lines are not here.
+RAIL_KINDS = {"rail", "subway", "light_rail", "narrow_gauge"}
+# The width of a viaduct; a detected "roof" that sits on it is the viaduct itself.
+RAIL_CORRIDOR_M = 10.0
 WATERWAY_WIDTHS_M = {"river": 30.0, "canal": 8.0, "stream": 4.0, "drain": 2.0, "ditch": 2.0}
 WORLDCOVER_CLASSES = {
     10: "tree",
@@ -100,8 +104,28 @@ def _osm_height(tags: dict[str, str]) -> float | None:
     return levels * METERS_PER_LEVEL if levels is not None else None
 
 
+def _layer(tags: dict[str, str]) -> int:
+    try:
+        return int(tags.get("layer", "0"))
+    except ValueError:
+        return 0
+
+
+def _is_underground(tags: dict[str, str]) -> bool:
+    """Tell a structure mapped below the ground, such as a metro station under a road."""
+    return (
+        tags.get("location") == "underground"
+        or _layer(tags) < 0
+        or tags.get("building:levels") == "0"
+    )
+
+
 def osm_buildings(features: list[Feature]) -> gpd.GeoDataFrame:
-    chosen = [f for f in features if "building" in f.tags and _is_polygon(f.geometry)]
+    chosen = [
+        f
+        for f in features
+        if "building" in f.tags and _is_polygon(f.geometry) and not _is_underground(f.tags)
+    ]
     rows = [
         {
             "building_id": f"osm/{f.osm_type}/{f.osm_id}",
@@ -128,6 +152,37 @@ def roads(features: list[Feature]) -> gpd.GeoDataFrame:
                 }
             )
             geometries.append(feature.geometry)
+    return _to_metric(rows, geometries)
+
+
+def _is_viaduct(tags: dict[str, str]) -> bool:
+    """Tell track that runs high above the street. A railway's bridge over a road or a
+    drain stays at the level of its track, so only viaducts and the metro's bridges count."""
+    bridge = tags.get("bridge", "no")
+    return bridge == "viaduct" or (bridge != "no" and tags["railway"] in ("subway", "light_rail"))
+
+
+def rails(features: list[Feature]) -> gpd.GeoDataFrame:
+    """Return the tracks in the open: on the ground, or raised on a viaduct."""
+    rows, geometries = [], []
+    for feature in features:
+        tags = feature.tags
+        if tags.get("railway") not in RAIL_KINDS or not _is_line(feature.geometry):
+            continue
+        if tags.get("tunnel", "no") != "no" or _layer(tags) < 0:
+            continue
+        rows.append(
+            {
+                "rail": tags["railway"],
+                "elevated": _is_viaduct(tags),
+                "name": tags.get("name"),
+            }
+        )
+        geometries.append(feature.geometry)
+    if not rows:
+        return gpd.GeoDataFrame(
+            {"rail": [], "elevated": [], "name": []}, geometry=[], crs=METRIC_CRS
+        )
     return _to_metric(rows, geometries)
 
 
@@ -329,7 +384,12 @@ def prepare(area: Area) -> None:
     major = road_lines[road_lines.width_m >= MAJOR_ROAD_M]
     carriageway = shapely.union_all(major.geometry.buffer(major.width_m / 2).values)
     on_road = mostly_on_mask(kept, carriageway)
-    survivors = kept[~duplicate & ~on_water & ~on_road].copy()
+    # So do the metro's viaducts. Tracks on the ground are left out: a station's sheds
+    # stand over them.
+    tracks = rails(features)
+    raised = tracks[tracks.elevated.astype(bool)]
+    on_rail = mostly_on_mask(kept, shapely.union_all(raised.buffer(RAIL_CORRIDOR_M / 2).values))
+    survivors = kept[~duplicate & ~on_water & ~on_road & ~on_rail].copy()
     survivors["building_id"] = "ob/" + survivors["full_plus_code"].astype(str)
     survivors["source"] = "open_buildings"
     survivors["name"] = None
@@ -356,6 +416,8 @@ def prepare(area: Area) -> None:
     paved = surfaces(features)
     if not paved.empty:
         layers["surfaces"] = paved.assign(geometry=paved.geometry.intersection(patch))
+    if not tracks.empty:
+        layers["rails"] = tracks.assign(geometry=tracks.geometry.intersection(patch))
 
     target = derived_path(area)
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -375,6 +437,18 @@ def prepare(area: Area) -> None:
         "open_buildings_duplicates_dropped": int(duplicate.sum()),
         "open_buildings_on_water_dropped": int((on_water & ~duplicate).sum()),
         "open_buildings_on_major_roads_dropped": int((on_road & ~on_water & ~duplicate).sum()),
+        "open_buildings_on_railways_dropped": int(
+            (on_rail & ~on_road & ~on_water & ~duplicate).sum()
+        ),
+        "osm_buildings_underground_skipped": sum(
+            1 for f in features if "building" in f.tags and _is_underground(f.tags)
+        ),
+        "rail_km": round(float(tracks.geometry.intersection(patch).length.sum()) / 1000, 1),
+        "rail_elevated_km": round(
+            float(tracks[tracks.elevated.astype(bool)].geometry.intersection(patch).length.sum())
+            / 1000,
+            1,
+        ),
         "open_buildings_kept": len(survivors),
         "open_buildings_under_10m2": int((areas < 10).sum()),
         "open_buildings_largest_m2": [round(float(value), 1) for value in largest],

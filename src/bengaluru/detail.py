@@ -122,6 +122,14 @@ SHADOW_PER_HEIGHT = 0.75
 STOREY_M = 3.2
 BLUR_RADIUS_PX = 16
 FOOTPATH_M = 1.8
+RAIL_BED_M = 4.4
+RAIL_TIE_EVERY_M = 4.0
+# The metro's viaduct: the top of its deck, the deck's depth, half the width under one
+# track, and the distance between piers.
+VIADUCT_M = 9.0
+VIADUCT_DECK_M = 1.8
+VIADUCT_HALF_M = 2.6
+VIADUCT_SPAN_M = 24.0
 LANDMARK_CLEARING_M = 16.0
 CEMETERY_ROW_M = 5.5
 CEMETERY_GRAVE_M = 4.0
@@ -382,6 +390,26 @@ def _paint_roads(canvas: np.ndarray, layers: Layers, view: Viewport) -> None:
     lined = roads[roads.road_class.isin(LINED_ROADS)]
     marks = [(g.intersection(layers.patch), 1) for line in lined.geometry for g in _dashes(line)]
     canvas[_burn(marks, view).astype(bool)] = SLOTS_32["road_line"]
+
+
+def _paint_rails(canvas: np.ndarray, rails: gpd.GeoDataFrame, patch, view: Viewport) -> None:
+    """Draw track on the ground: a bed of ballast, its ties, and the line of the rails."""
+    lines = rails.explode(index_parts=False).geometry
+    lines = [line for line in lines if line.geom_type == "LineString"]
+    if not lines:
+        return
+    beds = [
+        (line.buffer(RAIL_BED_M / 2, cap_style="flat").intersection(patch), 1) for line in lines
+    ]
+    canvas[_burn(beds, view).astype(bool)] = SLOTS_32["road_track"]
+    ties = [
+        (substring(line, at, at + 1.0).buffer(1.6, cap_style="flat").intersection(patch), 1)
+        for line in lines
+        for at in np.arange(0.0, line.length, RAIL_TIE_EVERY_M)
+    ]
+    canvas[_burn(ties, view).astype(bool)] = SLOTS_32["shadow_built"]
+    tracks = [(line.buffer(0.5, cap_style="flat").intersection(patch), 1) for line in lines]
+    canvas[_burn(tracks, view).astype(bool)] = SLOTS_32["background"]
 
 
 def _sun_offset(length: float) -> tuple[float, float]:
@@ -668,6 +696,23 @@ def _paint_building(draw, view, polygon, height, building_id, seed, style=None) 
         _paint_flat(draw, view, polygon, height, slot, shade, kind, building_id, seed)
 
 
+def _paint_span(draw, view, piece: LineString, deck) -> None:
+    """Draw one span of a viaduct: its pier, the side of its deck, the deck, and the track."""
+    pier = piece.interpolate(0.5, normalized=True)
+    x, foot = _project(view, pier.x, pier.y, 0)
+    _, head = _project(view, pier.x, pier.y, VIADUCT_M - VIADUCT_DECK_M)
+    draw.rectangle([x - 1, head, x + 1, foot], fill=SLOTS_32["wall_shade"])
+    draw.line([(x - 1, head), (x - 1, foot)], fill=SLOTS_32["wall_lit"])
+    top = [_project(view, x, y, VIADUCT_M) for x, y in deck.exterior.coords]
+    under = [_project(view, x, y, VIADUCT_M - VIADUCT_DECK_M) for x, y in deck.exterior.coords]
+    side = shapely.MultiPoint(top + under).convex_hull
+    if side.geom_type == "Polygon":
+        draw.polygon(list(side.exterior.coords), fill=SLOTS_32["wall_shade"])
+    draw.polygon(top, fill=SLOTS_32["wall_lit"])
+    track = [_project(view, x, y, VIADUCT_M) for x, y in piece.coords]
+    draw.line(track, fill=SLOTS_32["road_major"])
+
+
 def _tree_sprite(radius: int, seed: int) -> tuple[Image.Image, Image.Image, int]:
     """Return (sprite, mask, crown_center_y) for a shaded canopy with a short trunk."""
     width = 2 * radius + 3
@@ -707,7 +752,11 @@ def _tree_sprite(radius: int, seed: int) -> tuple[Image.Image, Image.Image, int]
 
 
 def _tree_points(
-    layers: Layers, surfaces: gpd.GeoDataFrame, tree_rows: list[LineString], seed: int
+    layers: Layers,
+    surfaces: gpd.GeoDataFrame,
+    tree_rows: list[LineString],
+    seed: int,
+    rails: gpd.GeoDataFrame | None = None,
 ) -> np.ndarray:
     """Return (x, y, variant) for trees, placed the same way whatever the crop."""
     left, bottom, right, top = layers.patch.bounds
@@ -746,6 +795,11 @@ def _tree_points(
             layers.roads.geometry.buffer(layers.roads.width_m / 2 + 1.5).values.to_numpy(),
             layers.buildings.geometry.buffer(1.8).values.to_numpy(),
             surfaces.geometry.values.to_numpy(),
+            *(
+                []
+                if rails is None
+                else [rails.geometry.buffer(RAIL_BED_M / 2 + 1.5).values.to_numpy()]
+            ),
         ]
     )
     blocked = blocked[~shapely.is_missing(blocked) & ~shapely.is_empty(blocked)]
@@ -769,6 +823,9 @@ class Scene:
     seed: int
     indexes: dict[str, shapely.STRtree]
     styles: dict[str, dict]
+    # Track on the ground, and the viaducts cut into spans of (track, deck).
+    rails: gpd.GeoDataFrame
+    spans: list[tuple[LineString, shapely.Polygon]]
 
 
 RADIUS_PX = (6, 7, 8, 9, 10, 12)
@@ -776,6 +833,24 @@ RADIUS_PX = (6, 7, 8, 9, 10, 12)
 
 def empty_surfaces() -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame({"kind": []}, geometry=[], crs=METRIC_CRS)
+
+
+def empty_rails() -> gpd.GeoDataFrame:
+    return gpd.GeoDataFrame({"rail": [], "elevated": []}, geometry=[], crs=METRIC_CRS)
+
+
+def viaduct_spans(rails: gpd.GeoDataFrame) -> list[tuple[LineString, shapely.Polygon]]:
+    """Cut the raised track into spans, each drawn at its own depth among the buildings."""
+    spans = []
+    for line in rails.explode(index_parts=False).geometry:
+        if line.geom_type != "LineString":
+            continue
+        for start in np.arange(0.0, line.length, VIADUCT_SPAN_M):
+            piece = substring(line, start, min(start + VIADUCT_SPAN_M, line.length))
+            deck = piece.buffer(VIADUCT_HALF_M, cap_style="flat")
+            if piece.geom_type == "LineString" and deck.geom_type == "Polygon":
+                spans.append((piece, deck))
+    return spans
 
 
 def load_landmarks() -> list[dict]:
@@ -812,8 +887,9 @@ def compute_trees(
     tree_rows: list[LineString],
     landmarks: list[dict],
     seed: int,
+    rails: gpd.GeoDataFrame | None = None,
 ) -> np.ndarray:
-    trees = _tree_points(layers, surfaces, tree_rows, seed)
+    trees = _tree_points(layers, surfaces, tree_rows, seed, rails)
     for landmark in landmarks:
         distance = np.hypot(trees[:, 0] - landmark["x"], trees[:, 1] - landmark["y"])
         trees = trees[distance > landmark["clearing"]]
@@ -828,13 +904,15 @@ def build_scene(
     seed: int = SEED,
     trees: np.ndarray | None = None,
     styles: dict[str, dict] | None = None,
+    rails: gpd.GeoDataFrame | None = None,
 ) -> Scene:
     tree_rows = tree_rows or []
     landmarks = landmarks or []
     surfaces = empty_surfaces() if surfaces is None else surfaces
+    rails = empty_rails() if rails is None else rails
     styles = styles or {}
     if trees is None:
-        trees = compute_trees(layers, surfaces, tree_rows, landmarks, seed)
+        trees = compute_trees(layers, surfaces, tree_rows, landmarks, seed, rails)
         cleared = layers.buildings[layers.buildings.building_id.isin(list(styles))]
         for row in cleared.itertuples():
             clearing = styles[row.building_id].get("clearing_m")
@@ -856,9 +934,14 @@ def build_scene(
         "buildings": layers.buildings,
         "surfaces": surfaces,
     }
+    raised = rails.elevated.astype(bool)
+    grounded = rails[~raised].reset_index(drop=True)
+    spans = viaduct_spans(rails[raised])
+    frames["rails"] = grounded
     indexes = {name: shapely.STRtree(frame.geometry.values) for name, frame in frames.items()}
+    indexes["spans"] = shapely.STRtree([deck for _, deck in spans])
     sprites = [_tree_sprite(RADIUS_PX[index % 6], seed + index) for index in range(12)]
-    return Scene(local, surfaces, trees, sprites, landmarks, seed, indexes, styles)
+    return Scene(local, surfaces, trees, sprites, landmarks, seed, indexes, styles, grounded, spans)
 
 
 def _view_quad(view: Viewport) -> shapely.Polygon:
@@ -920,6 +1003,15 @@ def _add_buildings(items: list, shadows: list, scene: Scene, local: Layers) -> N
             items.append((-_depth(center.x, center.y), row.building_id, 0, polygon, height))
 
 
+def _add_spans(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) -> None:
+    dx, dy = _sun_offset(VIADUCT_M * SHADOW_PER_HEIGHT)
+    for index in np.unique(scene.indexes["spans"].query(quad, predicate="intersects")):
+        piece, deck = scene.spans[index]
+        shadows.append((shapely.affinity.translate(deck, dx, dy), 1))
+        center = piece.interpolate(0.5, normalized=True)
+        items.append((-_depth(center.x, center.y), f"span/{index:07d}", 3, piece, deck))
+
+
 def _add_trees(items: list, shadows: list, scene: Scene, view: Viewport) -> None:
     trees = scene.trees
     screen_x, screen_y = _screen(view, trees[:, 0], trees[:, 1])
@@ -966,6 +1058,8 @@ def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) 
             sprite, sprite_mask, height = scene.sprites[extra]
             x, y = _project(view, payload[0], payload[1], 0)
             image.paste(sprite, (x - sprite.width // 2, y - height + 1), sprite_mask)
+        elif kind == 3:
+            _paint_span(draw, view, payload, extra)
         else:
             art = payload["sprite"]
             x, y = _project(view, payload["x"], payload["y"], 0)
@@ -991,10 +1085,12 @@ def render_detail(scene: Scene, view: Viewport) -> np.ndarray:
         canvas[_burn([(clearing, 1)], view).astype(bool)] = SLOTS_32["bare"]
     _paint_water(canvas, local, view)
     _paint_roads(canvas, local, view)
+    _paint_rails(canvas, _select(scene.rails, scene.indexes["rails"], quad), local.patch, view)
 
     items: list = []
     shadows: list = []
     _add_buildings(items, shadows, scene, local)
+    _add_spans(items, shadows, scene, quad)
     _add_trees(items, shadows, scene, view)
     _add_landmarks(items, shadows, landmarks)
     _darken_shadows(canvas, shadows, view)
@@ -1022,6 +1118,13 @@ def _load_surfaces(area: Area) -> gpd.GeoDataFrame:
     return gpd.read_file(path, layer="surfaces")
 
 
+def _load_rails(area: Area) -> gpd.GeoDataFrame:
+    path = derived_path(area)
+    if "rails" not in pyogrio.list_layers(path)[:, 0]:
+        return empty_rails()
+    return gpd.read_file(path, layer="rails")
+
+
 def trees_path(area: Area) -> Path:
     return Path("data/derived") / f"{area.name}_trees.npy"
 
@@ -1032,7 +1135,13 @@ def load_scene(area: Area, use_cached_trees: bool = False) -> Scene:
     landmarks = load_landmarks()
     trees = np.load(trees_path(area)) if use_cached_trees else None
     return build_scene(
-        layers, _load_tree_rows(area), landmarks, surfaces, trees=trees, styles=load_styles()
+        layers,
+        _load_tree_rows(area),
+        landmarks,
+        surfaces,
+        trees=trees,
+        styles=load_styles(),
+        rails=_load_rails(area),
     )
 
 

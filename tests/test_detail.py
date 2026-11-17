@@ -84,6 +84,26 @@ def test_adjacent_frames_join_without_a_seam():
     assert np.array_equal(joined, render_detail(scene, canvas))
 
 
+def test_track_and_viaduct_join_without_a_seam():
+    rails = gpd.GeoDataFrame(
+        {"rail": ["rail", "subway"], "elevated": [False, True]},
+        geometry=[
+            shapely.LineString([(0, 80), (300, 220)]),
+            shapely.LineString([(0, 220), (300, 80)]),
+        ],
+        crs=32643,
+    )
+    scene = build_scene(sample_layers(), rails=rails)
+    assert len(scene.rails) == 1
+    assert len(scene.spans) > 10
+    width = 2 * FRAME_PX
+    canvas = centered_viewport(PROJECTION_B, 150, 150, width, FRAME_PX)
+    whole = render_detail(scene, canvas)
+    joined = np.hstack([render_frame(scene, canvas, 0, 0), render_frame(scene, canvas, 1, 0)])
+    assert np.array_equal(joined, whole)
+    assert not np.array_equal(whole, render_detail(build_scene(sample_layers()), canvas))
+
+
 def test_default_view_keeps_its_paths():
     area = get_area("central")
     assert frames_dir(area).name == "frames"
