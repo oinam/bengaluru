@@ -4,8 +4,9 @@ A zoomable, searchable isometric pixel-art map of Bengaluru, drawn by code from 
 data: OpenStreetMap, Google Open Buildings, and ESA WorldCover. No photographs, satellite
 imagery, or image models go into the picture.
 
-Phase 0: the pipeline renders a test patch around Vidhana Soudha and Cubbon Park. The
-plan and where it stands are in [docs/PLAN.md](docs/PLAN.md).
+The central city, inside the Outer Ring Road, is built in four views and opens in the
+viewer in `web/`; the whole BBMP area is building. Nothing is online yet. The plan and
+where it stands are in [docs/PLAN.md](docs/PLAN.md).
 
 It follows the [Manipur map](https://manipur.oinam.com) and reuses its pipeline.
 

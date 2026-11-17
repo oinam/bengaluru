@@ -2,10 +2,46 @@
 
 ## Status
 
-*16 November 2026. Phase 0, Session 1 done: the pipeline is in, and the first frames of
-the test patch are in `out/vidhana-soudha/`. Phase 0's go/no-go is open: Brajeshwar looks
-at `20261116-174652_detail-315.png` (north up) and `20261116-174652_detail-0.png` (turned
-45°) and says whether it reads as Bengaluru. Session 2 then measures the city.*
+*17 November 2026. Brajeshwar said go: build the whole city. The central area is built,
+four views, and opens in the viewer (`mise run dev`, http://localhost:8655). The BBMP
+area is fetched and its build is the night's work, which carries on by itself at 23:00.
+The look is still Manipur's, unchanged; "What looks wrong" below is the list to choose
+from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
+
+### Central numbers, 2026-11-17
+
+The `central` area: 12.90–13.05 N, 77.52–77.68 E, 17.4 × 16.6 km, 288 km².
+
+| | |
+|---|---|
+| OSM buildings | 442,807; 37 underground ones left out |
+| Open Buildings v3 footprints in the box | 845,234 |
+| of those, under 0.70 confidence | 145,432 dropped |
+| duplicates of an OSM building | 295,120 dropped |
+| on water, a major road, or a viaduct | 799, 3,446, and 42 dropped |
+| Open Buildings kept | 400,395 |
+| **Buildings drawn** | **842,730**, 52% from OSM and 48% from Open Buildings |
+| Heights from the 2.5D raster / OSM tags / a default | 827,245 / 7,013 / 8,472 |
+| Height, median / 95th percentile / tallest | 6.8 m / 12.2 m / 161.5 m |
+| Railway and metro track in the open | 353 km, 116 km of it on viaducts (each track counted) |
+| Trees placed | 726,961 |
+| Named places in the search index | 47,809 |
+| Canvas, each view | 36,864 × 18,432 px (34,816 wide for the two side views), 162 frames |
+
+| Step | Time on this Mac |
+|---|---|
+| `fetch` | 19 min: the 533 MB Geofabrik extract, then 15 min cutting the area out of it |
+| `prepare` | 3 min 48 s, at a peak of 4.0 GB |
+| `build`, four views rendered and tiled | 22 min: about 4.5 min of frames a view with six workers, the rest tiling |
+| Tiles on disk | 978 MB in 13,555 files |
+
+The render workers hold 1.0 to 1.6 GB each whatever the area's size, since each reads
+its frame's buildings from disk. `20261117-090032_four-views.png` in `out/central/` shows
+the four views side by side.
+
+For the BBMP area, fetched the same morning (16 min): 1,101,980 OSM elements and
+1,906,910 Open Buildings footprints in the box. Each view is about 34 × 17 frames, four
+times central's.
 
 ### Phase 0 numbers, 2026-11-16
 
@@ -50,12 +86,9 @@ shows the four side by side.
 The park, the lakes, the road layout, and the massing and heights of the buildings come
 out right. These do not:
 
-1. **The metro station is a building on the road.** OSM maps the underground Vidhana
-   Soudha station as a building, and the pipeline draws it above ground, across Ambedkar
-   Veedhi. Underground structures need skipping. The metro line itself is not drawn
-   anywhere: the pipeline reads no railways, and here the line is in a tunnel. East of
-   the park, the viaduct along MG Road is mapped as one long building and pokes out of
-   the patch as a thin line.
+1. ~~The metro station is a building on the road, and the metro is not drawn.~~ Fixed
+   on 2026-11-17: underground structures are left out, track is drawn on the ground, and
+   viaducts as a deck on piers. Flyovers for roads are still flat on the ground.
 2. **The landmarks are plain blocks.** Vidhana Soudha has no dome and a blue roof; the
    High Court is cream, not red. Expected until Phase 2, but they are what a resident
    looks for first.
@@ -71,6 +104,10 @@ out right. These do not:
    the park the avenue trees are thin: streets get almost none.
 7. **The ground between buildings is sandy.** Manipur's color for built-up land reads as
    bare earth, which makes the office quarter look dusty.
+
+8. **Open ground inside the city is drawn as paddy.** WorldCover calls the Race Course,
+   the golf course, and some lawns "cropland", and Manipur's renderer draws cropland as
+   paddy fields with bunds. Seen in the central build, 2026-11-17.
 
 ## What this is
 

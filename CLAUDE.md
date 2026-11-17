@@ -4,9 +4,10 @@ An isometric pixel-art map of Bengaluru, rendered procedurally from free, openly
 data. It is the second city after the Manipur map (`~/dev/manipur`, live at
 https://manipur.oinam.com), and it starts from that project's pipeline and lessons.
 
-**Status: Phase 0, with its go/no-go open.** The pipeline is in and the test patch
-renders; Brajeshwar has yet to say whether the frame reads as Bengaluru. Read
-`docs/PLAN.md` first; it is the brief, and its Status section says where things stand.
+**Status: building the whole city.** Brajeshwar said go on 2026-11-17. The central area
+is built and opens in the viewer; the BBMP area is the night's work. The look is still
+Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
+Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
 prompts for each session.
@@ -53,13 +54,16 @@ downloads off the internal disk.
 **Heavy work runs at night.** Builds, renders of the central or BBMP areas, tiling,
 uploads, and large downloads start at 23:00 IST and stop at 04:00, while Brajeshwar
 sleeps. Do not start one outside that window; give it to the night's work instead:
-`mise run night [area]` does nothing outside the window and stops when it closes, and a
-launchd agent starts it at 23:00. A test patch frame or build takes seconds and runs
+`mise run night` builds `central` and then `bbmp`, does nothing outside the window, and
+stops when it closes, and a launchd agent starts it at 23:00. It builds a view again
+when the data or the drawing code (`detail.py`, `render.py`, `palettes.py`, the
+landmarks) has changed since, so a change made by day reaches the map overnight; expect
+that before editing those files. A test patch frame or build takes seconds and runs
 whenever asked. The reasoning is in `docs/DECISIONS.md`.
 
 ## Commands
 
-mise pins uv and runs each command below as a task: `mise tasks` lists them, and
+mise pins uv, node, and pnpm, and runs each command below as a task: `mise tasks` lists them, and
 `mise run <task> [area]` runs one, for example `mise run detail vidhana-soudha`. The
 areas are `vidhana-soudha` (the test patch), `central`, and `bbmp`.
 
@@ -70,7 +74,7 @@ data. The drive must be plugged in for anything that fetches, prepares, or rende
 not replace the links with folders; the reasoning is in `docs/DECISIONS.md`.
 
 ```
-mise install && mise run setup                  # installs the pinned tools, then the Python environment
+mise install && mise run setup                  # installs the pinned tools, then the Python environment and the viewer's packages
 uv sync                                         # installs the pinned Python 3.12 environment
 uv run bengaluru fetch   --area vidhana-soudha  # downloads into data/raw/<area>/; shared files into data/raw/_*/
 uv run bengaluru plan    --area vidhana-soudha  # writes a top-down check to out/<area>/
@@ -82,8 +86,12 @@ uv run bengaluru frames  --area vidhana-soudha  # renders the four views as seam
 uv run bengaluru build   --area vidhana-soudha  # renders and tiles the four views one at a time; resumes at the first missing frame
 uv run bengaluru tile    --area vidhana-soudha  # builds each view's Deep Zoom pyramid and the search index from frames on disk
 uv run python tools/four_views.py [area]        # lays the four built views side by side in one PNG in out/<area>/
-mise run night [area]                           # the night's work: fetch, prepare, and build inside 23:00 to 04:00; nothing outside it
+mise run night [area]                           # the night's work: fetch, prepare, and build central then bbmp, or the one area, inside 23:00 to 04:00; nothing outside it
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
+mise run dev [area]                             # serves the viewer at http://localhost:8655 on out/<area>/tiles; central by default
+mise run build [area]                           # type-checks and builds the viewer into web/dist, with the area's tiles linked in
+mise run preview                                # serves the built viewer at http://localhost:8654
+pnpm --dir web lint                             # type-checks, lints, and checks the viewer's formatting
 mise run schedule-on                            # installs the launchd agent that starts `mise run night` at 23:00; logs to logs/night.log
 mise run schedule-off                           # removes the agent
 uv run pytest                                   # runs the tests
