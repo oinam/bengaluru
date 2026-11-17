@@ -6,8 +6,8 @@ https://manipur.oinam.com), and it starts from that project's pipeline and lesso
 
 **Status: the whole city is built.** Brajeshwar said go on 2026-11-17, and the central
 area and then the BBMP area were built that day, four views each; the viewer opens on
-BBMP. Nothing is online yet; the deploy to bengaluru.oinam.com is written and waits on
-the Cloudflare side. The look is still Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
+BBMP. It is online at https://bengaluru.oinam.com since 2026-11-17. The look is still
+Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
 Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
@@ -128,7 +128,7 @@ data is separate: the tiles and their indexes are on R2 at bengaluru-tiles.oinam
 sent by `mise run upload` from this Mac. After a re-render, upload before pushing, so R2
 has the new pyramids and indexes when the code arrives. Uploading the index files
 changes the live map by itself, with no push, so it needs Brajeshwar's word as a push
-does. What is still to be set up before the first deploy is in `docs/PLAN.md`.
+does.
 
 ## /odo
 

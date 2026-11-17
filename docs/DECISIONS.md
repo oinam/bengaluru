@@ -318,3 +318,28 @@ pushed. It is the Manipur map's arrangement, less its Worker code:
 
 The upload is not part of the night's work. Sending the index files publishes, and
 that waits for Brajeshwar's word, as a push does.
+
+## 2026-11-17 — Going live with the first build, and what a domain move touches
+
+Brajeshwar asked to push and see `bengaluru.oinam.com` working the same afternoon, with
+BBMP's courtyards half redrawn. The upload now publishes what the manifest on disk
+names, which is always one whole build, and sends ahead the pyramids of views finished
+since; before, it refused to publish until every view was current. So the first build,
+with the lids, went live on 2026-11-17, and the courtyards follow when the night has
+finished them and the upload is run again, with `--prune` to take the first build off
+R2.
+
+He may move these maps to a domain of their own. The domain is named in five places,
+and nowhere else: the route in `web/wrangler.jsonc`, the tile base in the `deploy` script
+of `web/package.json`, the bucket in `tools/upload_tiles.py`, the origin in
+`web/r2-cors.json`, and the prose of `CLAUDE.md` and these docs. Links into the map are
+`#zoom/lat/lon`, so they survive a move.
+
+He also asked whether the maps' tiles can share one place, `cdn-tiles.oinam.com/manipur`
+and `/bengaluru`. They can: R2 keeps a separate cached copy of a tile for each asking
+origin, so one bucket can allow several sites (checked on `bengaluru-tiles`). An empty
+bucket `cdn-tiles` with that domain exists, made on 2026-11-17, and nothing uses it
+yet. Moving in needs a token for that bucket, a prefix in each map's upload and tile
+base, and a session in the Manipur repository, and it is better done once the domain
+question above is settled, since the tiles' domain would move with it. The cost of
+sharing is that one token then writes every map's tiles.

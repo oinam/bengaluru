@@ -9,29 +9,21 @@ drawing code, which made every view stale: central was drawn again by 12:19, and
 got two of its four views done before the day's window closed at 13:40. The night's work
 at 23:00 draws the other two, about 70 minutes, and only then does the viewer change
 over; until then it shows the first BBMP build, whole, with the lids. After that the
-night builds a view again only when the data or the drawing code changes. Nothing is
-online. The look is still Manipur's, unchanged; "What looks wrong" below is the list to
+night builds a view again only when the data or the drawing code changes. The look is still Manipur's, unchanged; "What looks wrong" below is the list to
 choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
 candidate answers to its first items. Phase 0's frames of the test patch are in
 `out/vidhana-soudha/`.*
 
-### Before the first deploy
+### Online
 
-The deploy is written (2026-11-17) and nothing is online. In order:
+Live at `bengaluru.oinam.com` since 2026-11-17, with the first BBMP build, the one with
+lids on the courtyards. Tiles are on R2 in `bengaluru-tiles`; a push to `main` deploys
+the viewer. Next: after the night finishes BBMP's courtyards, `uv run python
+tools/upload_tiles.py --prune` publishes them and removes the first build from R2.
 
-1. ~~An R2 bucket `bengaluru-tiles`, served at `bengaluru-tiles.oinam.com`, with the CORS
-   rules in `web/r2-cors.json`.~~ Made on 2026-11-17 with Wrangler, in APAC like
-   Manipur's, with the same rules: the site's origin, GET and HEAD.
-2. An R2 API token with Object Read & Write on that bucket, in `.env` (see
-   `.env.example`).
-3. `mise run upload`, once the night has finished BBMP's courtyards: about 4 GB in
-   53,000 files.
-4. A `CLOUDFLARE_API_TOKEN` secret on the GitHub repository, allowed to edit Workers in
-   the Oinam account.
-5. A push to `main`. The first one makes the Worker and attaches the domain.
-
-Brajeshwar's to settle before it is public: the license shown for the rendered map, the
-footer's wording, and the Go to list, all still Manipur's placeholders.
+Brajeshwar's to settle now that it is public: the license shown for the rendered map,
+the footer's wording, and the Go to list, all still Manipur's placeholders. He may move
+the maps to a domain of their own; `docs/DECISIONS.md` lists what that touches.
 
 ### BBMP numbers, 2026-11-17
 
