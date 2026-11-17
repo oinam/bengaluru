@@ -284,15 +284,23 @@ def duplicate_mask(
     return intersects, duplicate
 
 
-def mostly_on_mask(open_buildings: gpd.GeoDataFrame, area: shapely.Geometry) -> np.ndarray:
-    """Flag polygons mostly on an area where no building can stand, such as water."""
+def mostly_on_mask(open_buildings: gpd.GeoDataFrame, area) -> np.ndarray:
+    """Flag polygons mostly on an area where no building can stand, such as water.
+
+    The area is one geometry or many pieces, which may overlap. The pieces are never
+    joined: a city's roads join into one polygon with every block a hole in it, and
+    clipping that against each of a million footprints takes hours. Each footprint is
+    clipped against the pieces it touches, and only those clippings are joined.
+    """
     geometries = np.asarray(open_buildings.geometry.values)
-    # Only the pieces of the area a polygon touches; clipping the whole of a large lake and
-    # every river against each of half a million footprints takes hours.
-    parts = shapely.get_parts(area)
+    parts = shapely.get_parts(np.atleast_1d(np.asarray(area, dtype=object)))
+    parts = parts[~shapely.is_empty(parts)]
+    covered = np.zeros(len(geometries))
     index, part = shapely.STRtree(parts).query(geometries, predicate="intersects")
-    shared = shapely.area(shapely.intersection(geometries[index], parts[part]))
-    covered = np.bincount(index, weights=shared, minlength=len(geometries))
+    if len(index):
+        clipped = shapely.intersection(geometries[index], parts[part])
+        joined = gpd.GeoSeries(clipped).groupby(index).agg(shapely.union_all)
+        covered[joined.index.to_numpy()] = shapely.area(joined.to_numpy())
     return covered / shapely.area(geometries) >= WATER_COVERED
 
 
@@ -367,9 +375,7 @@ def prepare(area: Area) -> None:
 
     water = water_polygons(features)
     rivers = waterways(features)
-    wet = shapely.union_all(
-        [*water.geometry.values, *rivers.geometry.buffer(rivers.width_m / 2).values]
-    )
+    wet = [*water.geometry.values, *rivers.geometry.buffer(rivers.width_m / 2).values]
 
     osm = osm_buildings(features)
     candidates = load_open_buildings(area).to_crs(METRIC_CRS).reset_index(drop=True)
@@ -382,13 +388,13 @@ def prepare(area: Area) -> None:
     # Flyovers and footbridges over major roads get detected as long, thin roofs.
     road_lines = roads(features)
     major = road_lines[road_lines.width_m >= MAJOR_ROAD_M]
-    carriageway = shapely.union_all(major.geometry.buffer(major.width_m / 2).values)
+    carriageway = major.geometry.buffer(major.width_m / 2).values
     on_road = mostly_on_mask(kept, carriageway)
     # So do the metro's viaducts. Tracks on the ground are left out: a station's sheds
     # stand over them.
     tracks = rails(features)
     raised = tracks[tracks.elevated.astype(bool)]
-    on_rail = mostly_on_mask(kept, shapely.union_all(raised.buffer(RAIL_CORRIDOR_M / 2).values))
+    on_rail = mostly_on_mask(kept, raised.buffer(RAIL_CORRIDOR_M / 2).values)
     survivors = kept[~duplicate & ~on_water & ~on_road & ~on_rail].copy()
     survivors["building_id"] = "ob/" + survivors["full_plus_code"].astype(str)
     survivors["source"] = "open_buildings"

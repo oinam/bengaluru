@@ -35,6 +35,14 @@ def test_mostly_on_mask_flags_mostly_covered_polygons():
     assert mostly_on_mask(candidates, water).tolist() == [True, False]
 
 
+def test_mostly_on_mask_counts_overlapping_pieces_once():
+    # Two road pieces that overlap under the footprint cover 40% of it, not 80%.
+    pieces = [shapely.box(0, 0, 4, 10), shapely.box(0, 0, 4, 10), shapely.box(50, 50, 60, 60)]
+    candidates = frame(shapely.box(0, 0, 10, 10), shapely.box(0, 0, 6, 10))
+    assert mostly_on_mask(candidates, pieces).tolist() == [False, True]
+    assert mostly_on_mask(candidates, []).tolist() == [False, False]
+
+
 def test_assign_heights_prefers_tag_then_raster_then_default():
     buildings = frame(
         shapely.box(0, 0, 10, 10), shapely.box(20, 0, 30, 10), shapely.box(40, 0, 50, 10)
