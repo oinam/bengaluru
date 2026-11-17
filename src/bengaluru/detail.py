@@ -1173,9 +1173,11 @@ def load_scene(
 
 
 def _build_area_scene(area, layers, surfaces, landmarks, trees) -> Scene:
+    # Tree rows only matter while placing trees, and finding them parses all of the area's
+    # OSM, a gigabyte for the central area; with the trees already placed they are skipped.
     return build_scene(
         layers,
-        _load_tree_rows(area),
+        _load_tree_rows(area) if trees is None else [],
         landmarks,
         surfaces,
         trees=trees,
