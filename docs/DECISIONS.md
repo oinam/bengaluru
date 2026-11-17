@@ -277,3 +277,16 @@ central is worth keeping once the look settles is open.
 
 `tools/four_views.py` draws each view at most 4,608 px wide. At a fixed quarter scale
 central's sheet was 18,504 px wide and 317 MB, and BBMP's would have been twice that.
+
+## 2026-11-17 — A hole in a footprint is a courtyard, not a lid
+
+Manipur's renderer drew a footprint's holes as dark plates at roof height, which was
+enough for Imphal's few. Here the holes are the stadium bowls and the courtyards of the
+buildings a resident looks for first: 44 buildings in the test patch, 389 in central.
+The roof is now opened over each hole. What was drawn there before the building, ground
+and anything farther back, shows through as the floor, and the hole's far walls are
+drawn down to it with the building's own wall colors and windows. Nothing new is added
+to the palette or the building types.
+
+This changes `detail.py`, so every built view is stale and is drawn again: central the
+same day, BBMP from the same day into the night.

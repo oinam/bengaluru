@@ -122,8 +122,11 @@ out right. These do not:
 2. **The landmarks are plain blocks.** Vidhana Soudha has no dome and a blue roof; the
    High Court is cream, not red. Expected until Phase 2, but they are what a resident
    looks for first.
-3. **Courtyards and stadium bowls are gray plates at roof height.** Kanteerava Stadium's
-   field is a gray lid; Vidhana Soudha's courtyards are the same.
+3. ~~Courtyards and stadium bowls are gray plates at roof height.~~ Fixed on 2026-11-17:
+   a hole in a footprint is an opening down to the ground, with the inner walls that
+   face the viewer. Kanteerava Stadium shows its field. Before and after are in
+   `out/vidhana-soudha/20261117-115500_courtyards-before-after.png`. A tree in the near
+   half of a courtyard still stands in front of the wing that should hide its trunk.
 4. **The roofs are Imphal's.** Mid-size buildings get red, orange, and blue pitched tin
    roofs. This part of Bengaluru is flat concrete terraces, with red tile only on the
    older bungalows.
