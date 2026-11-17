@@ -4,11 +4,15 @@ Files go up with rclone through R2's S3-compatible endpoint, which, unlike the a
 behind `wrangler r2 bulk put`, has no limit of a few requests a second. rclone lists what
 the bucket already has and sends only what is missing, so a stopped run picks up where it
 left off; each pyramid is recorded once it is complete. The index files go last, so the
-manifest never names a pyramid R2 does not have yet. Only the pyramids of views the build
-has recorded as finished go up, and not those of a view it is about to draw again, so it
-is safe to run while `bengaluru build` is still working or has stopped partway. With
---pyramids-only it stops before the index files, which switch the live site over; send
-those once the code that reads them is deployed. With --until=HH:MM it starts no new
+manifest never names a pyramid R2 does not have yet.
+
+Two sets of pyramids go up. The ones the manifest on disk names are a whole build, since
+the build rewrites the manifest only once every view is finished; they are what the index
+files publish. The ones of views finished since, which the next manifest will name, go up
+ahead of it. A view the build is about to draw again is left out. So it is safe to run
+while `bengaluru build` is still working or has stopped partway. With --pyramids-only
+only the second set goes, and it stops before the index files, which switch the live site
+over. With --until=HH:MM it starts no new
 pyramid after that local time. With --prune it then removes from R2 the pyramids the
 manifest no longer names: a rebuild of the whole city leaves 4 GB of them, and the bucket
 shares R2's free 10 GB with the Manipur map's.
@@ -107,15 +111,10 @@ def deadline() -> datetime | None:
     return stop if stop > now else stop + timedelta(days=1)
 
 
-def ready(finished: set[str], done: set[str]) -> bool:
-    """True once the build has written a manifest of every view and R2 has all of them.
-
-    The build rewrites the manifest only once every view is finished; until then it may
-    name fewer views than are done, or pyramids R2 does not have.
-    """
+def named_pyramids() -> set[str]:
+    """The pyramids the manifest on disk names: one whole build."""
     manifest = json.loads((TILES / INDEXES[0]).read_text())
-    named = {view["pyramid"] for view in manifest["views"].values()}
-    return named == finished and named <= done
+    return {view["pyramid"] for view in manifest["views"].values()}
 
 
 def main() -> None:
@@ -126,11 +125,13 @@ def main() -> None:
     inputs = frames_fingerprint(get_area(AREA))
     views = json.loads(VIEWS_RECORD.read_text()).values()
     finished = {view["pyramid"] for view in views if view.get("inputs") == inputs}
+    named = named_pyramids()
+    wanted = finished if PYRAMIDS_ONLY else named | finished
     for pyramid in sorted((TILES / "pyramid").iterdir()):
-        if pyramid.name in done or pyramid.name not in finished:
+        if pyramid.name in done or pyramid.name not in wanted:
             continue
         if stop and datetime.now() >= stop:
-            print(f"stopped at {UNTIL}, {len(finished & done)} of {len(finished)} uploaded")
+            print(f"stopped at {UNTIL}, {len(wanted & done)} of {len(wanted)} uploaded")
             return
         for suffix, content_type in CONTENT_TYPES.items():
             # Tiles are named by content and never rewritten, so a size match is enough.
@@ -150,11 +151,9 @@ def main() -> None:
         print(f"{pyramid.name}: uploaded", flush=True)
     if PYRAMIDS_ONLY:
         print(f"{len(finished & done)} of {len(finished)} finished pyramids uploaded")
-        if ready(finished, done):
-            print("every view is on R2: push, then upload again without --pyramids-only")
         return
-    if not ready(finished, done):
-        sys.exit("The manifest is not ready to publish: wait for the build, then upload again.")
+    if not named <= done:
+        sys.exit("R2 does not have every pyramid the manifest names; upload again.")
     # Always sent, since an index can change without changing size.
     indexes = [flag for name in INDEXES for flag in ("--include", name)]
     copy(
@@ -170,7 +169,7 @@ def main() -> None:
     )
     print("indexes: uploaded", flush=True)
     if PRUNE:
-        prune(env, finished, done)
+        prune(env, named | finished, done)
 
 
 if __name__ == "__main__":
