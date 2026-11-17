@@ -631,9 +631,56 @@ def _paint_low_house(draw, view, polygon, height, slot, shade) -> None:
         )
 
 
-def _paint_flat(draw, view, polygon, height, slot, shade, kind, building_id, seed) -> None:
-    ring = np.array(orient(polygon, 1.0).exterior.coords)
-    _paint_walls(draw, view, ring, height, None, kind == "shop", kind in ("flat", "shop", "block"))
+def _courtyard_box(image, view, polygon, height) -> tuple[int, int, int, int] | None:
+    """Return the part of the image the footprint's holes cover, from the ground to the roof."""
+    points = [
+        _project(view, x, y, z)
+        for hole in polygon.interiors
+        for x, y in hole.coords
+        for z in (0, height)
+    ]
+    if not points:
+        return None
+    xs, ys = zip(*points, strict=True)
+    box = (
+        max(min(xs) - 1, 0),
+        max(min(ys) - 1, 0),
+        min(max(xs) + 2, image.width),
+        min(max(ys) + 2, image.height),
+    )
+    return box if box[0] < box[2] and box[1] < box[3] else None
+
+
+def _paint_courtyards(image, view, polygon, height, behind, box, shutters, windows) -> None:
+    """Open the roof over the footprint's holes, down to what stood there before it.
+
+    `behind` is the image inside `box` before the building was drawn. Through each opening
+    go the inner walls that face the camera and, below them, the courtyard's floor.
+    """
+    local = Viewport(behind.width, behind.height, view.x_offset - box[0], view.y_offset - box[1])
+    opening = Image.new("L", behind.size, 0)
+    floor = Image.new("L", behind.size, 0)
+    for hole in polygon.interiors:
+        ImageDraw.Draw(opening).polygon(
+            [_project(local, x, y, height) for x, y in hole.coords], fill=255
+        )
+        ImageDraw.Draw(floor).polygon([_project(local, x, y, 0) for x, y in hole.coords], fill=255)
+    layer = Image.new(image.mode, behind.size, SLOTS_32["wall_shade"])
+    layer.paste(behind, (0, 0), floor)
+    walls = ImageDraw.Draw(layer)
+    for hole in polygon.interiors:
+        # A hole's ring runs clockwise, so the walls drawn are the ones that face into it.
+        _paint_walls(walls, local, np.array(hole.coords), height, None, shutters, windows)
+    image.paste(layer, (box[0], box[1]), opening)
+
+
+def _paint_flat(image, draw, view, polygon, height, slot, shade, kind, building_id, seed) -> None:
+    polygon = orient(polygon, 1.0)
+    ring = np.array(polygon.exterior.coords)
+    shutters, windows = kind == "shop", kind in ("flat", "shop", "block")
+    box = _courtyard_box(image, view, polygon, height)
+    behind = image.crop(box) if box else None
+    _paint_walls(draw, view, ring, height, None, shutters, windows)
     outline = SLOTS_32["background"]
     points = [_project(view, x, y, height) for x, y in ring]
     draw.polygon(points, fill=SLOTS_32["wall_lit"], outline=outline)
@@ -644,12 +691,10 @@ def _paint_flat(draw, view, polygon, height, slot, shade, kind, building_id, see
             fill=slot,
             outline=shade,
         )
+    if behind is not None:
+        _paint_courtyards(image, view, polygon, height, behind, box, shutters, windows)
     for hole in polygon.interiors:
-        draw.polygon(
-            [_project(view, x, y, height) for x, y in hole.coords],
-            fill=SLOTS_32["wall_shade"],
-            outline=outline,
-        )
+        draw.line([_project(view, x, y, height) for x, y in hole.coords], fill=outline)
     if polygon.area >= WATER_TANK_MIN_M2 and _hash(seed, building_id + "t", 3) < 2:
         center = polygon.representative_point()
         x, y = _project(view, center.x, center.y, height)
@@ -672,7 +717,7 @@ def _ground_axes(polygon):
 STYLE_PAINTERS: dict = {}
 
 
-def _paint_building(draw, view, polygon, height, building_id, seed, style=None) -> None:
+def _paint_building(image, draw, view, polygon, height, building_id, seed, style=None) -> None:
     if style:
         STYLE_PAINTERS[style["style"]](draw, view, polygon, height)
         return
@@ -693,7 +738,7 @@ def _paint_building(draw, view, polygon, height, building_id, seed, style=None) 
     elif kind in ("house", "shed"):
         _paint_pitched(draw, view, polygon, height, slot, shade, kind == "house", True)
     else:
-        _paint_flat(draw, view, polygon, height, slot, shade, kind, building_id, seed)
+        _paint_flat(image, draw, view, polygon, height, slot, shade, kind, building_id, seed)
 
 
 def _paint_span(draw, view, piece: LineString, deck) -> None:
@@ -1068,7 +1113,8 @@ def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) 
     items.sort(key=lambda item: (item[0], item[1]))
     for _, label, kind, payload, extra in items:
         if kind == 0:
-            _paint_building(draw, view, payload, extra, label, scene.seed, scene.styles.get(label))
+            style = scene.styles.get(label)
+            _paint_building(image, draw, view, payload, extra, label, scene.seed, style)
         elif kind == 1:
             sprite, sprite_mask, height = scene.sprites[extra]
             x, y = _project(view, payload[0], payload[1], 0)

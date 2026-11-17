@@ -17,8 +17,10 @@ from bengaluru.detail import (
     STYLE_PAINTERS,
     TRANSPARENT,
     VIEWS,
+    _paint_flat,
     _paint_low_house,
     _paint_pitched,
+    _project,
     build_scene,
     detail_colors,
     frames_dir,
@@ -138,6 +140,32 @@ def test_low_house_veranda_reaches_past_the_plain_roof():
     _paint_low_house(ImageDraw.Draw(with_veranda), view, polygon, 9.0, 1, 2)
     plain_area = int((np.asarray(plain) != background).sum())
     assert int((np.asarray(with_veranda) != background).sum()) > plain_area
+
+
+def test_a_courtyard_shows_the_ground_and_its_far_walls():
+    view = centered_viewport(PROJECTION_B, 0, 0, 300, 300)
+    block = shapely.box(-40, -40, 40, 40)
+    hole = shapely.box(-25, -25, 25, 25)
+    ground = SLOTS_32["grass"]
+    image = Image.new("L", (300, 300), ground)
+    _paint_flat(
+        image, ImageDraw.Draw(image), view, block.difference(hole), 9.0, 1, 2, "flat", "b", 0
+    )
+    solid = Image.new("L", (300, 300), ground)
+    _paint_flat(solid, ImageDraw.Draw(solid), view, block, 9.0, 1, 2, "flat", "b", 0)
+    drawn, lid = np.asarray(image), np.asarray(solid)
+
+    x, y = _project(view, 0, 0, 0)
+    assert drawn[y, x] == ground
+    assert lid[y, x] != ground
+    opening = Image.new("L", (300, 300), 0)
+    points = [_project(view, x, y, 9.0) for x, y in hole.exterior.coords]
+    ImageDraw.Draw(opening).polygon(points, fill=1)
+    inside = np.asarray(opening).astype(bool)
+    # The far inner walls take the top of the opening; the floor shows below them.
+    assert 0 < int((drawn[inside] == ground).sum()) < int(inside.sum())
+    assert SLOTS_32["wall_lit"] in drawn[inside]
+    assert np.array_equal(drawn[lid == ground], lid[lid == ground])
 
 
 def test_frames_on_disk_are_not_drawn_again(tmp_path):
