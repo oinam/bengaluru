@@ -7,19 +7,22 @@ area finished at 08:59 and the BBMP area at 11:42, four views each, and the view
 on BBMP (`mise run dev`, http://localhost:8655). Courtyards were then opened in the
 drawing code, which made every view stale: central was drawn again by 12:19, and BBMP
 got two of its four views done before the day's window closed at 13:40. The night's work
-at 23:00 draws the other two, about 70 minutes, and only then does the viewer change
-over; until then it shows the first BBMP build, whole, with the lids. After that the
-night builds a view again only when the data or the drawing code changes. The look is
-still Manipur's, unchanged; "What looks wrong" below is the list to choose from, and
-`20261117-091959_look-options.png` in `out/central/` shows four candidate answers to its
-first items. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
+at 23:00 drew the other two and finished at 00:35 on the 18th, so both areas are whole
+and current. From here the night builds a view again only when the data or the drawing
+code changes. The look is still Manipur's, unchanged; "What looks wrong" below is the
+list to choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
+candidate answers to its first items. Phase 0's frames of the test patch are in
+`out/vidhana-soudha/`.*
 
 ### Online
 
-Live at `bengaluru.oinam.com` since 2026-11-17, with the first BBMP build, the one with
-lids on the courtyards. Tiles are on R2 in `bengaluru-tiles`; a push to `main` deploys
-the viewer. Next: after the night finishes BBMP's courtyards, `uv run python
-tools/upload_tiles.py --prune` publishes them and removes the first build from R2.
+Live at `bengaluru.oinam.com` since 2026-11-17. It went up with the first BBMP build,
+the one with lids on the courtyards, and changed over to the courtyard build at 00:45 on
+the 18th, once the night had finished it; `20261118-010916_crop-chinnaswamy-315.png` in
+`out/bbmp/` is the stadium as it now shows. Tiles are on R2 in `bengaluru-tiles`; a push
+to `main` deploys the viewer. The first build was then removed from R2, which leaves the
+bucket at 4.1 GB in 53,114 files, and the account at about 8 of R2's free 10 GB with the
+Manipur map's 3.9.
 
 Brajeshwar's to settle now that it is public: the license shown for the rendered map,
 the footer's wording, and the Go to list, all still Manipur's placeholders. He may move
