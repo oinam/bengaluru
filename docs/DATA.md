@@ -6,6 +6,7 @@ source; never remove one. "Used for" must be specific.
 | Source | Version / date fetched | License | URL | Used for | Attribution text |
 |---|---|---|---|---|---|
 | OpenStreetMap | Overpass, 2026-11-16 (`vidhana-soudha`) | ODbL 1.0 | https://www.openstreetmap.org/copyright | roads, metro and rail, water, parks, land use, POIs, names, boundaries, buildings | "© OpenStreetMap contributors" |
+| OpenStreetMap, as the Geofabrik extract `asia/india/southern-zone` | `southern-zone-261116.osm.pbf`, 533 MB, data to 2026-11-16T21:22:36Z, fetched 2026-11-17 (`central`, `bbmp`) | ODbL 1.0 | https://download.geofabrik.de/asia/india/southern-zone.html | the same as the row above, for the areas too large for Overpass | "© OpenStreetMap contributors" |
 | Google Open Buildings v3 | v3, S2 level 6 cell `3baf`, 2026-11-16 (`vidhana-soudha`) | CC BY 4.0 or ODbL 1.0, user's choice; we use CC BY 4.0 | https://sites.research.google/gr/open-buildings/ | building footprints where OSM has none | "Google Open Buildings, CC BY 4.0" |
 | Google Open Buildings 2.5D Temporal | v1, 2023-06-30 epoch, `gs://open-buildings-temporal-data/v1/geotiffs/3bae4_2023_06_30/`, 2026-11-16 (`vidhana-soudha`) | CC BY 4.0 or ODbL 1.0, user's choice; we use CC BY 4.0 | https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_Research_open-buildings-temporal_v1 | building heights (band 2, `building_height`, meters, 0 to 100) | "Google Open Buildings 2.5D Temporal, CC BY 4.0. Contains modified Copernicus Sentinel data" |
 | ESA WorldCover 2021 | v200, tile `N12E075`, 2026-11-16 (`vidhana-soudha`) | CC BY 4.0 | https://esa-worldcover.org/en/data-access | ground class (trees, grass, built, water); never sampled for color | "© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by ESA WorldCover consortium" |
@@ -35,13 +36,18 @@ Each source's own page, read on the day of the first fetch.
   free of charge, without restriction of use", under CC BY 4.0, with the attribution
   text in the table.
 
+## Licenses as read on 2026-11-17
+
+- **Geofabrik extract** (https://download.geofabrik.de/asia/india/southern-zone.html):
+  "Data processed by Geofabrik GmbH and created by OpenStreetMap Contributors" and
+  "License: ODbL 1.0". It is OpenStreetMap's data cut to a region, under OpenStreetMap's
+  license and credit; Geofabrik asks for nothing more.
+
 ## Candidates
 
 Sources the plan expects to use and has not touched yet. Each moves into the register
 above, with its license read again on the day, before any code touches it.
 
-- **Geofabrik extract of OpenStreetMap**, `asia/india/southern-zone`: ODbL 1.0. The
-  central and BBMP areas cut their OSM from it; the test patch uses Overpass.
 - **Copernicus GLO-30 DEM**: Copernicus DEM license, free with attribution.
 - **A tree canopy height product**: not chosen. Find one that is openly licensed for
   derivative works and confirm it with Brajeshwar before use.
