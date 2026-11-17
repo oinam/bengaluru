@@ -6,7 +6,7 @@
     "dev": "vite",
     "lint": "tsc --noEmit && eslint . && prettier --check .",
     "format": "prettier --write .",
-    "build": "tsc --noEmit && vite build && ln -sfn ../../out/${MAP_AREA:-central}/tiles dist/tiles"
+    "build": "tsc --noEmit && vite build && ln -sfn ../../out/${MAP_AREA:-bbmp}/tiles dist/tiles"
   },
   "dependencies": {
     "openseadragon": "5.0.1"

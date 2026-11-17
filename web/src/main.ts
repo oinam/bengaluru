@@ -173,7 +173,7 @@ const needle = byId("needle", HTMLElement);
 let views: Record<string, View> = {};
 // The frame search places and flow lines are written in.
 let indexFrame: Frame | null = null;
-let areaName = "central";
+let areaName = "bbmp";
 let currentView = NORTH_UP_VIEW;
 let pendingTarget: Target | null = null;
 let still: HTMLCanvasElement | null = null;

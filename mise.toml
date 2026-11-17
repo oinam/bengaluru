@@ -84,12 +84,12 @@ run = "uv run python tools/four_views.py ${usage_area}"
 
 [tasks.dev]
 description = "Serve the viewer for development at http://localhost:8655, on out/<area>/tiles"
-usage = 'arg "[area]" default="central"'
+usage = 'arg "[area]" default="bbmp"'
 run = "MAP_AREA=${usage_area} pnpm --dir web dev"
 
 [tasks.build]
 description = "Type-check and build the viewer into web/dist, with out/<area>/tiles linked in"
-usage = 'arg "[area]" default="central"'
+usage = 'arg "[area]" default="bbmp"'
 run = "MAP_AREA=${usage_area} pnpm --dir web build"
 
 [tasks.preview]

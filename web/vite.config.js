@@ -5,9 +5,9 @@ import { defineConfig } from "vite";
 
 // `vite preview` serves the built map, whose tiles are linked into dist; the dev server
 // serves them straight from the render output.
-// MAP_AREA picks another rendered area, such as `vidhana-soudha` or `bbmp`, instead of
-// `central`.
-const TILES = join(import.meta.dirname, "../out", process.env.MAP_AREA ?? "central", "tiles");
+// MAP_AREA picks another rendered area, such as `vidhana-soudha` or `central`, instead of
+// `bbmp`, the whole city.
+const TILES = join(import.meta.dirname, "../out", process.env.MAP_AREA ?? "bbmp", "tiles");
 const TYPES = {
   ".json": "application/json",
   ".webp": "image/webp",
