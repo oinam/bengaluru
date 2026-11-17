@@ -4,9 +4,9 @@ An isometric pixel-art map of Bengaluru, rendered procedurally from free, openly
 data. It is the second city after the Manipur map (`~/dev/manipur`, live at
 https://manipur.oinam.com), and it starts from that project's pipeline and lessons.
 
-**Status: building the whole city.** Brajeshwar said go on 2026-11-17. The central area
-is built and opens in the viewer; the BBMP area is the night's work. The look is still
-Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
+**Status: the whole city is built.** Brajeshwar said go on 2026-11-17, and the central
+area and then the BBMP area were built that day, four views each; the viewer opens on
+BBMP. Nothing is online. The look is still Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
 Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
@@ -90,7 +90,7 @@ uv run python tools/crop.py central lalbagh 77.58691 12.94886 [view] [px]   # on
 uv run python tools/look_options.py central 77.5790 12.9865   # one place in several candidate looks, side by side, for Brajeshwar to choose from; changes nothing
 mise run night [area]                           # the night's work: fetch, prepare, and build central then bbmp, or the one area, inside 23:00 to 04:00; nothing outside it
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
-mise run dev [area]                             # serves the viewer at http://localhost:8655 on out/<area>/tiles; central by default
+mise run dev [area]                             # serves the viewer at http://localhost:8655 on out/<area>/tiles; bbmp, the whole city, by default
 mise run build [area]                           # type-checks and builds the viewer into web/dist, with the area's tiles linked in
 mise run preview                                # serves the built viewer at http://localhost:8654
 pnpm --dir web lint                             # type-checks, lints, and checks the viewer's formatting

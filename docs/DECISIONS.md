@@ -244,3 +244,36 @@ What is different from Manipur's:
 Not decided here, and carried over from Manipur only as placeholders: the rendered map's
 license in the credits (CC BY-SA 4.0), the footer's wording, and the palette of the page.
 Nothing is deployed, and there is no domain yet.
+
+## 2026-11-17 — What the city's size changed in the pipeline
+
+Central is 75 times the test patch and BBMP four times central. Three things that were
+fine on the patch were not on the city, and each is changed in how the work is done, not
+in what comes out:
+
+- **`prepare` tests a footprint against the pieces of water, road, and viaduct, not
+  their union.** Joining every major road into one polygon and intersecting each
+  footprint with it ran for 16 minutes on central without finishing. Each footprint is
+  now clipped by only the pieces it touches, and the clippings are joined per footprint,
+  so overlapping pieces still count once. Central takes 3 min 48 s; the test patch
+  drops the same footprints as before.
+- **A render worker reads each frame's buildings from the derived file.** Six workers
+  each holding the city's buildings came to 11 GB on central. The GeoPackage's spatial
+  index gives a frame its buildings in well under a second, and the frames are the same
+  pixel for pixel as with everything in memory.
+- **A worker with its trees already placed does not parse the area's OSM again.** The
+  tree rows were the last reason it did.
+
+With these a worker stays at 1.0 to 1.6 GB whatever the area, and BBMP builds on this
+Mac with half its memory free.
+
+## 2026-11-17 — The viewer opens on the whole city
+
+BBMP was built by 11:42 on 2026-11-17, so `mise run dev` and `mise run build` now take
+`bbmp` when no area is named; `mise run dev central` still serves the central build.
+The night keeps both areas: central is the quick one, 22 minutes, and shows a change
+to the drawing code before the two and a half hours of BBMP are spent on it. Whether
+central is worth keeping once the look settles is open.
+
+`tools/four_views.py` draws each view at most 4,608 px wide. At a fixed quarter scale
+central's sheet was 18,504 px wide and 317 MB, and BBMP's would have been twice that.

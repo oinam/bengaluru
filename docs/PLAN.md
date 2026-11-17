@@ -2,11 +2,45 @@
 
 ## Status
 
-*17 November 2026. Brajeshwar said go: build the whole city. The central area is built,
-four views, and opens in the viewer (`mise run dev`, http://localhost:8655). The BBMP
-area is fetched and its build is the night's work, which carries on by itself at 23:00.
-The look is still Manipur's, unchanged; "What looks wrong" below is the list to choose
-from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
+*17 November 2026. Brajeshwar said go: build the whole city. It is built. The central
+area finished at 08:59 and the BBMP area at 11:42, four views each, and the viewer opens
+on BBMP (`mise run dev`, http://localhost:8655). The night's work at 23:00 now finds both
+current and builds a view again only after the data or the drawing code changes. Nothing
+is online. The look is still Manipur's, unchanged; "What looks wrong" below is the list
+to choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
+candidate answers to its first items. Phase 0's frames of the test patch are in
+`out/vidhana-soudha/`.*
+
+### BBMP numbers, 2026-11-17
+
+The `bbmp` area: 12.83–13.14 N, 77.46–77.78 E, 34.7 × 34.3 km, about 1,190 km².
+
+| | |
+|---|---|
+| OSM buildings | 799,662; 91 underground ones left out |
+| Open Buildings v3 footprints in the box | 1,906,910 |
+| of those, under 0.70 confidence | 295,547 dropped |
+| duplicates of an OSM building | 526,069 dropped |
+| on water, a major road, or a viaduct | 1,216, 7,790, and 79 dropped |
+| Open Buildings kept | 1,076,209 |
+| **Buildings drawn** | **1,875,702**, 43% from OSM and 57% from Open Buildings |
+| Heights from the 2.5D raster / OSM tags / a default | 1,813,358 / 13,998 / 48,346 |
+| Height, median / 95th percentile / tallest | 6.0 m / 12.2 m / 170 m, the cap |
+| Railway and metro track in the open | 715 km, 248 km of it on viaducts (each track counted) |
+| Trees placed | 3,501,976 |
+| Named places in the search index | 77,121 |
+| Canvas, each view | 71,680 × 36,864 px (69,632 wide for the two side views), 630 and 612 frames |
+
+| Step | Time on this Mac |
+|---|---|
+| `fetch` | 16 min, the Geofabrik extract already on disk |
+| `prepare` | 13 min, then 4 min placing the trees |
+| `build`, four views rendered and tiled | 2 h 26 min: about 33 min of frames a view with six workers, 4 min tiling |
+| Tiles on disk | 3.9 GB in 53,119 files |
+
+No process went over 5.1 GB, and the Mac kept 37% to 57% of its memory free through the
+build. `20261117-114341_four-views.png` in `out/bbmp/` shows the four views side by side,
+and three crops beside it show Whitefield, Electronic City, and Yelahanka.
 
 ### Central numbers, 2026-11-17
 
@@ -36,12 +70,8 @@ The `central` area: 12.90–13.05 N, 77.52–77.68 E, 17.4 × 16.6 km, 288 km².
 | Tiles on disk | 978 MB in 13,555 files |
 
 The render workers hold 1.0 to 1.6 GB each whatever the area's size, since each reads
-its frame's buildings from disk. `20261117-090032_four-views.png` in `out/central/` shows
+its frame's buildings from disk. `20261117-114350_four-views.png` in `out/central/` shows
 the four views side by side.
-
-For the BBMP area, fetched the same morning (16 min): 1,101,980 OSM elements and
-1,906,910 Open Buildings footprints in the box. Each view is about 34 × 17 frames, four
-times central's.
 
 ### Phase 0 numbers, 2026-11-16
 
