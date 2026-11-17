@@ -9,10 +9,10 @@ drawing code, which made every view stale: central was drawn again by 12:19, and
 got two of its four views done before the day's window closed at 13:40. The night's work
 at 23:00 draws the other two, about 70 minutes, and only then does the viewer change
 over; until then it shows the first BBMP build, whole, with the lids. After that the
-night builds a view again only when the data or the drawing code changes. The look is still Manipur's, unchanged; "What looks wrong" below is the list to
-choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
-candidate answers to its first items. Phase 0's frames of the test patch are in
-`out/vidhana-soudha/`.*
+night builds a view again only when the data or the drawing code changes. The look is
+still Manipur's, unchanged; "What looks wrong" below is the list to choose from, and
+`20261117-091959_look-options.png` in `out/central/` shows four candidate answers to its
+first items. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
 ### Online
 
