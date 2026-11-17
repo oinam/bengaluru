@@ -1,4 +1,5 @@
 import OpenSeadragon from "openseadragon";
+import { startLabels, type Place } from "./labels";
 import { startPanel } from "./panel";
 import { startRivers } from "./rivers";
 import { TILE_BASE } from "./tiles";
@@ -14,14 +15,6 @@ import {
   type View,
 } from "./views";
 
-interface Place {
-  name: string;
-  kind: string;
-  x: number;
-  y: number;
-  tier: number;
-}
-
 // A place to show: a spot on the earth, how close to stand, and which way to face.
 interface Target {
   lon: number;
@@ -30,20 +23,11 @@ interface Target {
   view: string;
 }
 
-interface Label {
-  place: Place;
-  element: HTMLElement;
-}
-
 const MANIFEST = `${TILE_BASE}manifest.json`;
 const STILL_MAX_MS = 4000;
 const SEARCH_INDEX = `${TILE_BASE}search.json`;
 const MAX_RESULTS = 12;
 const FLY_TO_IMAGE_ZOOM = 1.5;
-// The city has far more named places than fit; the smallest wait until the map is close.
-const TIER_MIN_ZOOM: Record<number, number> = { 1: 0, 2: 0.18, 3: 1.2 };
-const LABEL_CHAR_PX = 7;
-const LABEL_HEIGHT_PX = 20;
 const TILT_FULL_ZOOM = 0.1;
 const TILT_NONE_ZOOM = 0.4;
 const NEW_ISSUE_URL = "https://github.com/oinam/bengaluru/issues/new";
@@ -183,6 +167,7 @@ let still: HTMLCanvasElement | null = null;
 let water: ReturnType<typeof startWater> | null = null;
 let rivers: ReturnType<typeof startRivers> | null = null;
 let marker: HTMLElement | null = null;
+let labels: ReturnType<typeof startLabels> | null = null;
 
 function showMarker(x: number, y: number): void {
   if (marker) {
@@ -223,8 +208,7 @@ function openView(target: Target): void {
   pendingTarget = target;
   needle.style.transform = `rotate(${String(northAngle(viewData(target.view)))}deg)`;
   placeLabelsInView();
-  // Opening clears the overlays, so the labels and marker are rebuilt or dropped.
-  labels.length = 0;
+  // Opening clears the overlays, so the marker is dropped.
   marker = null;
   viewer.open(`${TILE_BASE}pyramid/${viewData(target.view).pyramid}/${areaName}.dzi`);
 }
@@ -270,7 +254,8 @@ viewer.addHandler("open", () => {
   });
   updateTilt();
   updateSmoothing();
-  buildLabels();
+  labels ??= startLabels(viewer);
+  labels.show(places);
   updateCorrectionLink();
   writeHash();
   if (water) {
@@ -280,7 +265,6 @@ viewer.addHandler("open", () => {
     water = startWater(viewer, byId("animation", HTMLInputElement), toCurrentView);
     rivers = startRivers(viewer, toCurrentView);
     viewer.addHandler("animation-finish", writeHash);
-    viewer.addHandler("animation-finish", updateLabels);
     viewer.addHandler("animation-finish", updateCorrectionLink);
     viewer.addHandler("animation", updateTilt);
     viewer.addHandler("animation", updateSmoothing);
@@ -299,62 +283,8 @@ window.addEventListener("hashchange", () => {
   }
 });
 
-const labels: Label[] = [];
-
-function buildLabels(): void {
-  if (labels.length || !places.length || !viewer.world.getItemCount()) {
-    return;
-  }
-  for (const place of places) {
-    const element = document.createElement("div");
-    element.className = `label label-${place.tier}`;
-    element.textContent = place.name;
-    element.hidden = true;
-    viewer.addOverlay({
-      element,
-      location: viewer.viewport.imageToViewportCoordinates(place.x, place.y),
-      placement: OpenSeadragon.Placement.CENTER,
-      checkResize: false,
-    });
-    labels.push({ place, element });
-  }
-  updateLabels();
-}
-
 function imageZoom(): number {
   return viewer.viewport.viewportToImageZoom(viewer.viewport.getZoom());
-}
-
-function updateLabels(): void {
-  const zoom = imageZoom();
-  const taken: { left: number; right: number; top: number; bottom: number }[] = [];
-  const ordered = [...labels].sort((a, b) => a.place.tier - b.place.tier);
-  for (const { place, element } of ordered) {
-    let show = zoom >= (TIER_MIN_ZOOM[place.tier] ?? Infinity);
-    if (show) {
-      const point = viewer.viewport.imageToViewerElementCoordinates(
-        new OpenSeadragon.Point(place.x, place.y),
-      );
-      const halfWidth = (place.name.length * LABEL_CHAR_PX) / 2;
-      const box = {
-        left: point.x - halfWidth,
-        right: point.x + halfWidth,
-        top: point.y - LABEL_HEIGHT_PX / 2,
-        bottom: point.y + LABEL_HEIGHT_PX / 2,
-      };
-      show = !taken.some(
-        (other) =>
-          box.left < other.right &&
-          box.right > other.left &&
-          box.top < other.bottom &&
-          box.bottom > other.top,
-      );
-      if (show) {
-        taken.push(box);
-      }
-    }
-    element.hidden = !show;
-  }
 }
 
 // Pixel art shrunk with hard edges turns to speckle, so it is smoothed while the map is
@@ -466,7 +396,7 @@ fetch(SEARCH_INDEX, { cache: "no-cache" })
     basePlaces = entries;
     places = entries;
     placeLabelsInView();
-    buildLabels();
+    labels?.show(places);
     if (viewer.world.getItemCount()) {
       updateCorrectionLink();
     }
