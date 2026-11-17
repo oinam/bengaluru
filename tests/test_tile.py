@@ -4,7 +4,7 @@ from shapely.geometry import LineString
 from bengaluru.areas import Area
 from bengaluru.detail import PROJECTION
 from bengaluru.prepare import METRIC_CRS, derived_path
-from bengaluru.tile import flow_lines, pyramid_version
+from bengaluru.tile import _drop_old_pyramids, flow_lines, pyramid_version
 
 
 def test_pyramid_version_follows_the_frame_bytes(tmp_path):
@@ -51,3 +51,10 @@ def test_flow_lines_name_rivers_only(tmp_path, monkeypatch):
     frame.to_file(path, layer="waterways", driver="GPKG")
 
     assert [line.get("name") for line in flow_lines(area, 0.0, 0.0)] == [None, None]
+
+
+def test_only_the_pyramids_no_view_points_at_are_dropped(tmp_path):
+    for name in ("old", "kept"):
+        (tmp_path / "pyramid" / name).mkdir(parents=True)
+    _drop_old_pyramids(tmp_path, {"315": {"pyramid": "kept"}})
+    assert [path.name for path in (tmp_path / "pyramid").iterdir()] == ["kept"]

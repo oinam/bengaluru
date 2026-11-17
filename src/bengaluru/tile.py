@@ -20,6 +20,7 @@ from bengaluru.detail import (
     SPRITE_DIR,
     _render_view,
     frames_dir,
+    frames_fingerprint,
     load_scene,
     manifest_path,
     plan_view,
@@ -207,6 +208,14 @@ def tile(area: Area) -> None:
     _write_indexes(area, target, views)
 
 
+def _drop_old_pyramids(target: Path, views: dict) -> None:
+    """Delete the pyramids no view points at, left behind when a view is built again."""
+    current = {entry["pyramid"] for entry in views.values()}
+    for pyramid in (target / PYRAMID_DIR).iterdir():
+        if pyramid.is_dir() and pyramid.name not in current:
+            shutil.rmtree(pyramid)
+
+
 def _past(deadline: float | None) -> bool:
     return deadline is not None and time.time() >= deadline
 
@@ -216,15 +225,18 @@ def build(area: Area, only: list[str] | None = None, deadline: float | None = No
     more than the finished tiles and one view's frames. Returns whether the map is built.
 
     Stopped, it picks up at the first frame that is not on disk. Past the deadline, an epoch
-    time, no frame and no pyramid starts; a pyramid already being written is finished.
+    time, no frame and no pyramid starts; a pyramid already being written is finished. A
+    view built from other data or an older renderer is built again, and until then the
+    viewer keeps showing the one it has.
     """
     target = tiles_dir(area)
     target.mkdir(parents=True, exist_ok=True)
     record = target / VIEWS_RECORD
     views = json.loads(record.read_text()) if record.exists() else {}
+    inputs = frames_fingerprint(area)
     scene = None
     for view in only or RENDERED_VIEWS:
-        if view in views:
+        if views.get(view, {}).get("inputs") == inputs:
             continue
         if _past(deadline):
             return False
@@ -234,12 +246,14 @@ def build(area: Area, only: list[str] | None = None, deadline: float | None = No
         if not _render_view(area, scene, view, deadline=deadline) or _past(deadline):
             print(f"{view}: stopped at the deadline; the next run carries on from here")
             return False
-        views[view] = _view_entry(area, view, target)
+        views[view] = {**_view_entry(area, view, target), "inputs": inputs}
         record.write_text(json.dumps(views, indent=2) + "\n")
         shutil.rmtree(frames_dir(area, view))
-    finished = all(view in views for view in RENDERED_VIEWS)
+    finished = all(views.get(view, {}).get("inputs") == inputs for view in RENDERED_VIEWS)
     if finished:
         if not manifest_path(area).exists():
             plan_view(area, scene or load_scene(area), DEFAULT_VIEW)
         _write_indexes(area, target, {view: views[view] for view in RENDERED_VIEWS})
+        # Only now: until the manifest is rewritten, the viewer still reads the old ones.
+        _drop_old_pyramids(target, views)
     return finished

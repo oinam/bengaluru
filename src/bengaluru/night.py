@@ -11,6 +11,8 @@ from bengaluru.prepare import prepare, stats_path
 from bengaluru.tile import build
 
 NIGHT_WINDOW = "23:00-04:00"
+# What a night builds when it is not told, in this order: the city's center, then all of it.
+NIGHT_AREAS = ("central", "bbmp")
 PMSET = "/usr/bin/pmset"
 # The Mac-wide permission to schedule a wake, shared by every project; see docs/WAKE.md.
 WAKE_RULE = Path("/etc/sudoers.d/claude-wake")
@@ -58,8 +60,9 @@ def schedule_wake(opens: dt.datetime) -> None:
         print(f"night: could not set a wake for {opens:%H:%M}: {asked.stderr.strip()}")
 
 
-def night(area: Area, window: str = NIGHT_WINDOW) -> None:
-    """Fetch, prepare, and build the area, each only if it is not done, inside the window.
+def night(areas: list[Area], window: str = NIGHT_WINDOW) -> None:
+    """Fetch, prepare, and build each area in turn, each step only if it is not done or its
+    inputs have changed, inside the window.
 
     Started outside the window, as when the Mac wakes late, it does nothing. No step
     starts once the window has closed, and the build stops at its next frame.
@@ -67,7 +70,8 @@ def night(area: Area, window: str = NIGHT_WINDOW) -> None:
     now = dt.datetime.now()
     # Fixed before anything reads the drive, which can hold a first read for hours.
     closes = closing_time(window, now)
-    print(f"night: {now:%Y-%m-%d %H:%M}, {area.name}, window {window}", flush=True)
+    names = ", ".join(area.name for area in areas)
+    print(f"night: {now:%Y-%m-%d %H:%M}, {names}, window {window}", flush=True)
     # A window given by hand is a test; only the real one wakes the Mac.
     if window == NIGHT_WINDOW:
         schedule_wake(next_opening(window, now))
@@ -77,6 +81,15 @@ def night(area: Area, window: str = NIGHT_WINDOW) -> None:
         print("night: outside the window; nothing started")
         return
     deadline = closes.timestamp()
+    for area in areas:
+        if not _work(area, deadline):
+            print(f"night: stopped when the window closed at {closes:%H:%M}", flush=True)
+            return
+    print(f"night: everything is built, at {dt.datetime.now():%H:%M}")
+
+
+def _work(area: Area, deadline: float) -> bool:
+    """Carry one area as far as the deadline allows and return whether it is built."""
     steps = (
         ("fetch", raw_dir(area) / "SOURCES.txt", fetch),
         ("prepare", stats_path(area), prepare),
@@ -85,11 +98,14 @@ def night(area: Area, window: str = NIGHT_WINDOW) -> None:
         if product.exists():
             continue
         if time.time() >= deadline:
-            print(f"night: the window closed before {name}; the next night carries on")
-            return
-        print(f"night: {name}", flush=True)
+            print(
+                f"night: the window closed before {area.name}'s {name}; the next night carries on"
+            )
+            return False
+        print(f"night: {area.name}, {name}", flush=True)
         run(area)
-    if build(area, deadline=deadline):
-        print(f"night: {area.name} is built, at {dt.datetime.now():%H:%M}")
-    else:
-        print(f"night: stopped when the window closed at {closes:%H:%M}; the next night carries on")
+    if not build(area, deadline=deadline):
+        print(f"night: {area.name} is not finished; the next night carries on")
+        return False
+    print(f"night: {area.name} is built, at {dt.datetime.now():%H:%M}", flush=True)
+    return True

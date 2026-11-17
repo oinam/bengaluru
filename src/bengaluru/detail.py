@@ -1196,11 +1196,16 @@ def frame_path(directory: Path, column: int, row: int) -> Path:
     return directory / f"{row:03d}_{column:03d}.png"
 
 
-def frames_fingerprint(area: Area, canvas: Viewport) -> str:
-    """Return a hash of what decides a view's frames: the data, the canvas, and the renderer."""
+def frames_fingerprint(area: Area, canvas: Viewport | None = None) -> str:
+    """Return a hash of what decides a view's frames: the data, the canvas, and the renderer.
+
+    Without a canvas it is the same for every view, and tells whether a built view is stale.
+    """
     stat = derived_path(area).stat()
     digest = hashlib.blake2b(f"{canvas}:{stat.st_size}:{stat.st_mtime_ns}".encode(), digest_size=8)
-    sources = [*Path(__file__).parent.glob("*.py"), LANDMARKS_PATH, *SPRITE_DIR.glob("*")]
+    package = Path(__file__).parent
+    drawing = [package / name for name in ("detail.py", "render.py", "palettes.py")]
+    sources = [*drawing, LANDMARKS_PATH, *SPRITE_DIR.glob("*")]
     for path in sorted(sources):
         if path.is_file():
             digest.update(path.read_bytes())

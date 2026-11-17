@@ -2,7 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   Starts the night's work every day at 23:00 local time: `mise run night`, which fetches,
-  prepares, and builds inside the 23:00 to 04:00 window and does nothing outside it.
+  prepares, and builds the central area and then the whole city inside the 23:00 to 04:00
+  window, and does nothing outside it.
   Install and remove it with `mise run schedule-on` and `mise run schedule-off`; don't edit
   the copy in ~/Library/LaunchAgents. If the Mac is asleep at 23:00, launchd runs this when
   the Mac next wakes, and a run that starts after 04:00 does nothing but set the next
