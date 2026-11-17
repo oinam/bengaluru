@@ -6,7 +6,8 @@
     "dev": "vite",
     "lint": "tsc --noEmit && eslint . && prettier --check .",
     "format": "prettier --write .",
-    "build": "tsc --noEmit && vite build && ln -sfn ../../out/${MAP_AREA:-bbmp}/tiles dist/tiles"
+    "build": "tsc --noEmit && vite build && ln -sfn ../../out/${MAP_AREA:-bbmp}/tiles dist/tiles",
+    "deploy": "VITE_TILE_BASE=https://bengaluru-tiles.oinam.com/ pnpm run build && rm -f dist/tiles && wrangler deploy"
   },
   "dependencies": {
     "openseadragon": "5.0.1"
@@ -18,6 +19,7 @@
     "prettier": "3.9.10",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.1",
-    "vite": "7.1.12"
+    "vite": "7.1.12",
+    "wrangler": "4.158.0"
   }
 }

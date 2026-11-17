@@ -1,0 +1,9 @@
+{
+  // The viewer alone, as static assets. The tiles and their indexes are on R2, at
+  // bengaluru-tiles.oinam.com, and reach it from `mise run upload`.
+  "name": "bengaluru",
+  "account_id": "091e65b116deac24fcc274459b6fbde0",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "dist" },
+  "routes": [{ "pattern": "bengaluru.oinam.com", "custom_domain": true }],
+}
