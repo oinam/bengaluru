@@ -1,10 +1,15 @@
-# Tool versions and the project's commands. uv and pnpm still install the packages; mise
-# only picks their versions and runs the tasks. rclone joins when the tiles go online.
+# Tool versions, local secrets, and the project's commands. uv and pnpm still install the
+# packages; mise only picks their versions and runs the tasks.
 
 [tools]
 uv = "0.9.18"
 node = "22"
 pnpm = "12.8.1"
+rclone = "1.75.2"
+
+[env]
+# Secrets live in .env, which git ignores; .env.example lists the names.
+_.file = { path = ".env", redact = true }
 
 [tasks.setup]
 description = "Install the Python environment and the viewer's packages"
@@ -95,3 +100,8 @@ run = "MAP_AREA=${usage_area} pnpm --dir web build"
 [tasks.preview]
 description = "Serve the built viewer at http://localhost:8654"
 run = "pnpm --dir web exec vite preview"
+
+[tasks.upload]
+description = "Upload an area's new tile pyramids, then its index files, to R2; the index files switch the live site over"
+usage = 'arg "[area]" default="bbmp"'
+run = "uv run python tools/upload_tiles.py ${usage_area}"
