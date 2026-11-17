@@ -169,3 +169,78 @@ in with the lid open.
 
 To take the permission away: `sudo rm /etc/sudoers.d/claude-wake`. `mise run
 schedule-off` removes the agent but leaves any wake already set, at most one.
+
+## 2026-11-17 — Build all of it, starting today
+
+Brajeshwar, in the morning: the point is the map of the whole city, so go ahead and build
+it, and set the nightly work to keep building and rendering it. That is the go on
+Phase 0's question, and it starts Phase 1 and Phase 3 together: the central area first,
+then the BBMP box.
+
+For this one day he lifted the night-only rule for six hours, 07:40 to 13:40, while he
+was at the office. The rule stands for every other day.
+
+So the order of the plan changed. Session 2, measuring the city on a sample and showing
+three tree treatments, did not happen first; the central build is the measurement, and
+its numbers are in `docs/PLAN.md`. The look is still Manipur's, unchanged, and still
+Brajeshwar's to change: anything he changes is drawn again by the next night's work.
+
+## 2026-11-17 — The night builds central, then the whole city, and again when anything changes
+
+`mise run night`, and so the 23:00 agent, now works through `central` and then `bbmp`
+(`NIGHT_AREAS` in `src/bengaluru/night.py`); `mise run night <area>` still does one. Each
+area is fetched and prepared if it has not been, then built view by view until the window
+closes, and the next night carries on at the first missing frame.
+
+Each built view records what it was drawn from: the derived data's size and time, and
+the three files that decide pixels (`detail.py`, `render.py`, `palettes.py`) with the
+landmarks and sprites. A view whose record differs from today's is built again. So a
+change to the renderer or the data made during the day reaches the map overnight, with
+no command to remember. The viewer keeps showing the old pyramids until all four views
+of an area are new, then the old ones are deleted.
+
+The frames' own fingerprint is the same record plus the canvas. It used to hash every
+file in the package, which would have thrown away a night's frames for a change to the
+command line.
+
+## 2026-11-17 — Railways, the metro's viaducts, and what is underground
+
+Three fixes to what Phase 0 listed as wrong, all in how the data is read, none in the
+look:
+
+- OSM maps the stations under the road as buildings. A building tagged
+  `location=underground`, with a negative `layer`, or with `building:levels=0` is left
+  out. In the test patch that is six, among them the station that sat on Ambedkar Veedhi.
+- The pipeline read no railways. Track in the open (`railway` of `rail`, `subway`,
+  `light_rail`, or `narrow_gauge`, not in a tunnel) is now a `rails` layer. On the ground
+  it is drawn as a bed of ballast with ties and a dark line.
+- A viaduct (`bridge=viaduct`, or any bridge on the metro) is drawn as a deck 9 m up on
+  piers 24 m apart, each span sorted among the buildings around it. A railway's ordinary
+  bridge over a road or a drain stays at track level. A detected footprint that sits
+  mostly on a viaduct is dropped as the viaduct itself.
+
+The deck's height, width, and colors are first guesses from the palette's existing wall
+and road colors; they are Brajeshwar's to change. Flyovers for roads are still drawn flat.
+
+## 2026-11-17 — The viewer
+
+`web/` is the Manipur map's viewer, copied as it stood on 2026-11-17, without what is
+Imphal's: the aircraft and their timetable, the Sangai, the weather, the Worker, and the
+deploy script. It keeps OpenSeadragon, search, labels, the four views with north up
+first, the water, the Go to panel, the help, and the credits. `mise run dev [area]`
+serves it at http://localhost:8655 on `out/<area>/tiles`.
+
+What is different from Manipur's:
+
+- **Links carry latitude and longitude**, `#zoom/lat/lon` and `/view` when turned, not
+  canvas pixels. Manipur's links broke when its canvas grew and needed a table of old
+  frames; this map's canvas will grow from central to BBMP, and a rebuild may move it.
+- **Only the names in view get an element.** The city has tens of thousands of named
+  places; Imphal's few thousand each had one. The smallest names wait for a closer zoom
+  than in Manipur.
+- **The Go to list is spots, not names from the search index.** A first list, taken from
+  OSM's own positions; Brajeshwar picks the real one.
+
+Not decided here, and carried over from Manipur only as placeholders: the rendered map's
+license in the credits (CC BY-SA 4.0), the footer's wording, and the palette of the page.
+Nothing is deployed, and there is no domain yet.
