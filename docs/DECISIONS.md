@@ -521,3 +521,10 @@ second copy of the palette packer; two functions that read an optional layer, no
 and a noise term in the ground painter that was added to every class alike, so it chose
 nothing. What got a name: the roof slots for tin and concrete, the four kinds of thing
 the scene sorts and paints, the view's turn, and the pieces of a multi-part geometry.
+
+## 2026-11-18 — The license line, the Go to list, and the viaduct stay, for now
+
+Three things went public as placeholders and were Brajeshwar's to settle: the "Rendered
+map CC BY-SA 4.0" line in Credits, the 16 places in the Go to list, and the metro
+viaduct drawn as a cream deck on piers. His word on all three: keep them, for now. They
+are no longer open questions, and each is still his to change.

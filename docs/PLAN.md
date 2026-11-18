@@ -24,9 +24,10 @@ to `main` deploys the viewer. The first build was then removed from R2, which le
 bucket at 4.1 GB in 53,114 files, and the account at about 8 of R2's free 10 GB with the
 Manipur map's 3.9.
 
-Brajeshwar's to settle now that it is public: the license shown for the rendered map,
-the footer's wording, and the Go to list, all still Manipur's placeholders. He may move
-the maps to a domain of their own; `docs/DECISIONS.md` lists what that touches.
+On 2026-11-18 Brajeshwar kept, for now, the three things that went public as
+placeholders: the "Rendered map CC BY-SA 4.0" line in Credits, the 16 places in the Go
+to list, and the metro viaduct as a cream deck on piers. He may move the maps to a
+domain of their own; `docs/DECISIONS.md` lists what that touches.
 
 ### Next: the airport
 
