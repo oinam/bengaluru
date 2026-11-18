@@ -28,8 +28,24 @@ https://pixelchennai.com/. Read from its own About text.
 
 ## Isometric Mumbai
 
-https://isometricmumbai.com/ by Aryan Gupta. Tagged AI on Isometric Cities. Not studied
-yet; read its own notes before Phase 0.
+https://isometricmumbai.com/ by Aryan Gupta, launched 2026-11-07. Read 2026-11-18 from
+the README of its repository, `flash1405/isometric-mumbai` (MIT), and its model card.
+
+- Greater Mumbai, Colaba to Dahisar, at 0.293 m per pixel, about 5 GB of WebP tiles on a
+  Cloudflare Worker and R2. Taxis, buses, and trains are simulated in the viewer.
+- Control render: Google's 3D mesh is nearly flat in Mumbai, so he extrudes his own city
+  in three.js from GlobalBuildingAtlas footprints, with heights from OSM, Wikidata, Open
+  Buildings 2.5D, and Wikipedia's list of towers, and drapes Google's imagery, rendered
+  straight down, on the roofs and the ground.
+- Teacher: GPT Image redraws about 700 to 800 of those render tiles as pixel art.
+- Student: a rank-32 LoRA on FLUX.2 klein 4B (Apache 2.0) learns render to art from those
+  pairs, in about an hour on one rented B200. It then paints the city in about 8,000
+  calls of a 1024 px tile, 4 steps, about 2.5 seconds each, in four passes so every tile
+  has finished neighbors; about an hour on one B200 and eight A100s.
+- About 20 landmarks are repainted by GPT Image one at a time.
+- Lesson for us: the picture's detail comes from the image model and from real imagery
+  under it. The second is what rule 1 forbids, and Google's Map Tiles policy bars
+  content based on its content; that risk is his.
 
 ## Isometric Imphal (our first map)
 
@@ -83,7 +99,8 @@ paid in advance. Its list of 26 April 2024 prices, for Indian users outside gove
 
 The map with the airport is 34.7 × 44.2 km, about 1,535 km²: 16 scenes of 10 × 10 km by
 area alone, and more likely 20 to 30 since scenes will not line up with it. In
-Cartosat-3 color that is Rs 48,000 to 72,000 before tax. Not checked: today's prices,
+Cartosat-3 color that is Rs 48,000 to 72,000 before tax, about $510 to $770 at the Rs 94
+to the dollar of mid-November 2026; a scene is about $26. Not checked: today's prices,
 whether recent cloud-free scenes cover all of it, and what the Bhoonidhi license allows.
 A 2022 NRSC deck describes the base license as single-user internal use, and says
 hosting the imagery on the web may cost up to three times the price; whether a map
@@ -114,3 +131,48 @@ Sources: [Bhoonidhi commercial products FAQ, 26 April 2024](https://bhoonidhi.nr
 [Upstream Tech, commercial imagery use FAQ](https://support.upstream.tech/article/78-commercial-imagery-use-faq),
 [Google Map Tiles API policies](https://developers.google.com/maps/documentation/tile/policies),
 [Copernicus Data Space terms](https://dataspace.copernicus.eu/node/10).
+
+## What the AI-drawn maps cost
+
+Read 2026-11-18, after Brajeshwar asked how Isometric Mumbai and Pixel Chennai are made,
+why they look better than ours, and what they cost. Dollar figures are the makers' own
+where quoted; the rest are arithmetic from their numbers and are marked so.
+
+They all work the same way. A plain render of the city, the control, is repainted tile
+by tile by an image model. A frontier model (GPT Image, Nano Banana) paints a few dozen
+to a few hundred tiles well but is slow, costly, and uneven, so those become lessons for
+a small open model, which then paints the other thousands on rented GPUs. The look comes
+from the model: texture, light, windows, and roof clutter that our renderer does not
+draw. Ours is their first step and stops there.
+
+| Map | Control render | Teacher | Student and hardware | Cost |
+|---|---|---|---|---|
+| Isometric Mumbai | own extrusions with Google imagery draped on | about 800 GPT Image tiles | FLUX.2 klein 4B LoRA; rented B200 and A100s | maker's table: teacher $100 to 150, generation $10 to 30, training about an hour of a B200, hosting about $0; roughly $150 to 250 in all |
+| Pixel Chennai | OSM and Overture extrusions with a canopy map, like ours | "a few" Nano Banana tiles | Qwen-Image-Edit-2511 LoRA with a 4-step LoRA, on the maker's MacBook | not published; a few dollars of teacher tiles and no rented GPU, so probably under $50 beyond the laptop (my estimate) |
+| Isometric NYC | Google 3D tiles | about 40 pairs from Nano Banana | Qwen Image-Edit LoRA; rented H100 | fine-tune "~12 bucks"; about 40,000 tiles at "less than $3 an hour and more than 200 generations/hour", so at most about $600 of GPU (my arithmetic) |
+| Isometric SF | Google 3D tiles | 1,460 Nano Banana 2 seeds | FLUX.2 klein 4B LoRA; rented H100s | about 172 H100-hours with experiments; at $2 to 4 an hour, $350 to 700 (my arithmetic) |
+
+None of them publishes a total, and none counts the maker's time, which the NYC and SF
+write-ups say was the real cost: weeks of checking seams, water, and trees by eye,
+because the models cannot find their own mistakes.
+
+**What it would mean here.** Pixel Chennai's route fits rule 1: its control render is
+drawn from open data, as ours is, and no photograph of the city goes in. A view of our
+map with the airport is about 3.4 gigapixels, about 3,200 tiles of 1024 px by area, and
+perhaps 8,000 to 13,000 calls with the overlap the seam-free passes need (my estimate).
+At 1 to 2.5 seconds a call that is 3 to 9 GPU-hours a view, so about $10 to 40 a view
+and $40 to 160 for the four views, on top of $5 to 150 for the teacher's tiles depending
+on how many and which model. `CLAUDE.md` parks this route because he has no GPU; rented
+by the hour, the GPU is the small part. The larger costs are the ones above: the
+checking by eye, and three things this project holds to that a painted layer strains.
+The output is no longer the same for the same inputs unless the model, its weights, and
+the hardware are pinned (rule 3). A model invents detail that is not in the data. And
+the teacher's output carries its provider's terms.
+
+Sources: [Isometric Mumbai README](https://github.com/flash1405/isometric-mumbai),
+[its model card](https://huggingface.co/Flash1405/isometric-mumbai),
+[launch post](https://x.com/flash1405/status/2118904458767925479),
+[Isometric NYC write-up](https://cannoneyed.com/projects/isometric-nyc),
+[How to make isometric cities, Justin Chavez](https://www.justinchavez.com/blog/isometric-sf-how/),
+[Pixel Stanford's comparison table](https://github.com/aadityabuilds/isometric-pixxels),
+[H100 rental prices, October 2026](https://neurohive.io/en/guides/cloud-gpu-pricing/).
