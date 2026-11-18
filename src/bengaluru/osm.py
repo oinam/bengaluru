@@ -20,6 +20,15 @@ class Feature:
     geometry: BaseGeometry
 
 
+@dataclass(frozen=True)
+class Route:
+    """A route relation: its tags, and its ways and nodes by id."""
+
+    tags: dict[str, str]
+    ways: frozenset[int]
+    nodes: frozenset[int]
+
+
 def _coords(geometry: list[dict | None]) -> list[tuple[float, float]]:
     return [(point["lon"], point["lat"]) for point in geometry if point]
 
@@ -55,10 +64,31 @@ def _multipolygon_geometry(element: dict) -> BaseGeometry | None:
     return outer.difference(unary_union(inner)) if inner else outer
 
 
+def load_elements(path: Path) -> list[dict]:
+    return json.loads(path.read_text())["elements"]
+
+
+def routes_of(elements: list[dict]) -> list[Route]:
+    """Return the route relations, which carry no geometry of their own."""
+    return [
+        Route(
+            element["tags"],
+            frozenset(m["ref"] for m in element["members"] if m["type"] == "way"),
+            frozenset(m["ref"] for m in element["members"] if m["type"] == "node"),
+        )
+        for element in elements
+        if element["type"] == "relation" and element.get("tags", {}).get("type") == "route"
+    ]
+
+
 def load_features(path: Path) -> list[Feature]:
-    """Parse osm.json, keeping nodes, ways, and multipolygon relations."""
+    return features_of(load_elements(path))
+
+
+def features_of(elements: list[dict]) -> list[Feature]:
+    """Turn nodes, ways, and multipolygon relations into features."""
     features = []
-    for element in json.loads(path.read_text())["elements"]:
+    for element in elements:
         tags = element.get("tags", {})
         kind = element["type"]
         if kind == "node":

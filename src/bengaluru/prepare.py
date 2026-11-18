@@ -14,7 +14,7 @@ from rasterio.windows import transform as window_transform
 
 from bengaluru.areas import Area
 from bengaluru.fetch import raw_dir
-from bengaluru.osm import Feature, load_features
+from bengaluru.osm import Feature, Route, features_of, load_elements, routes_of
 from bengaluru.plan import load_open_buildings
 
 METRIC_CRS = 32643
@@ -184,6 +184,69 @@ def rails(features: list[Feature]) -> gpd.GeoDataFrame:
             {"rail": [], "elevated": [], "name": []}, geometry=[], crs=METRIC_CRS
         )
     return _to_metric(rows, geometries)
+
+
+def _level(tags: dict[str, str]) -> str:
+    """Tell where a metro track runs, as the map draws it: only open track gets a viaduct."""
+    if tags.get("tunnel", "no") != "no" or _layer(tags) < 0:
+        return "tunnel"
+    return "raised" if tags["railway"] in RAIL_KINDS and _is_viaduct(tags) else "ground"
+
+
+def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.GeoDataFrame]:
+    """Return the metro's lines and stations as layers, for the viewer to draw over the map.
+
+    A track belongs to the line whose route relation names it, and takes that line's name
+    and color. It is open if a route in service names it, whatever its own tag says: the
+    relations are kept up to date where the ways are not. Track no route names, the depots
+    and crossovers, is left out, and so is an area the metro does not reach.
+    """
+    line_of: dict[int, dict] = {}
+    building: set[int] = set()
+    # Routes in service first, so a track two routes name is open if either is.
+    for route in sorted(routes, key=lambda route: route.tags.get("route") != "subway"):
+        tags = route.tags
+        line = {
+            "line": tags.get("ref") or tags.get("name"),
+            "colour": tags.get("colour"),
+            "open": tags.get("route") == "subway",
+        }
+        for way in route.ways:
+            line_of.setdefault(way, line)
+        if not line["open"]:
+            building |= route.nodes
+    tracks = [
+        f
+        for f in features
+        if f.osm_type == "way"
+        and f.osm_id in line_of
+        and f.tags.get("railway") in ("subway", "construction")
+        and _is_line(f.geometry)
+    ]
+    if not tracks:
+        return {}
+    rows = [{**line_of[f.osm_id], "level": _level(f.tags)} for f in tracks]
+    lines = _to_metric(rows, [f.geometry for f in tracks])
+    lines = lines.assign(geometry=lines.geometry.intersection(patch))
+    lines = lines[~lines.geometry.is_empty]
+
+    rows, points = [], []
+    for feature in features:
+        tags = feature.tags
+        if feature.osm_type != "node" or "name" not in tags:
+            continue
+        opened = tags.get("railway") == "station" and tags.get("station") == "subway"
+        if opened or (feature.osm_id in building and tags.get("construction") == "station"):
+            rows.append({"name": tags["name"], "open": opened})
+            points.append(feature.geometry)
+    if lines.empty or not rows:
+        return {} if lines.empty else {"metro": lines}
+    stations = _to_metric(rows, points)
+    stations = stations[stations.geometry.within(patch)]
+    # A station stands at the level of the track beside it.
+    nearest = shapely.STRtree(lines.geometry.values).nearest(stations.geometry.values)
+    stations = stations.assign(level=lines.level.to_numpy()[nearest])
+    return {"metro": lines} | ({"stations": stations} if len(stations) else {})
 
 
 def waterways(features: list[Feature]) -> gpd.GeoDataFrame:
@@ -370,7 +433,8 @@ def ground_polygons(area: Area, patch: shapely.Geometry) -> gpd.GeoDataFrame:
 
 def prepare(area: Area) -> None:
     raw = raw_dir(area)
-    features = load_features(raw / "osm.json")
+    elements = load_elements(raw / "osm.json")
+    features = features_of(elements)
     patch = gpd.GeoSeries([shapely.box(*area.bounds)], crs=4326).to_crs(METRIC_CRS).iloc[0]
 
     water = water_polygons(features)
@@ -424,6 +488,7 @@ def prepare(area: Area) -> None:
         layers["surfaces"] = paved.assign(geometry=paved.geometry.intersection(patch))
     if not tracks.empty:
         layers["rails"] = tracks.assign(geometry=tracks.geometry.intersection(patch))
+    layers |= metro(features, routes_of(elements), patch)
 
     target = derived_path(area)
     target.parent.mkdir(parents=True, exist_ok=True)

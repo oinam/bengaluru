@@ -45,7 +45,7 @@ CACHE_CONTROL = "public, max-age=31536000, immutable"
 INDEX_CACHE_CONTROL = "no-cache"
 CONTENT_TYPES = {".webp": "image/webp", ".dzi": "application/xml"}
 VIEWS_RECORD = TILES / "views.json"
-INDEXES = ("manifest.json", "search.json", "flow.json", "credits.json")
+INDEXES = ("manifest.json", "search.json", "flow.json", "metro.json", "credits.json")
 TRANSFERS = 32
 ATTEMPTS = 5
 

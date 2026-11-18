@@ -1,5 +1,6 @@
 import OpenSeadragon from "openseadragon";
 import { startLabels, type Place } from "./labels";
+import { startMetro } from "./metro";
 import { startPanel } from "./panel";
 import { startRivers } from "./rivers";
 import { TILE_BASE } from "./tiles";
@@ -179,6 +180,7 @@ let pendingTarget: Target | null = null;
 let still: HTMLCanvasElement | null = null;
 let water: ReturnType<typeof startWater> | null = null;
 let rivers: ReturnType<typeof startRivers> | null = null;
+let metro: ReturnType<typeof startMetro> | null = null;
 let marker: HTMLElement | null = null;
 let labels: ReturnType<typeof startLabels> | null = null;
 
@@ -274,9 +276,11 @@ viewer.addHandler("open", () => {
   if (water) {
     water.refresh();
     rivers?.refresh();
+    metro?.refresh();
   } else {
     water = startWater(viewer, byId("animation", HTMLInputElement), toCurrentView);
     rivers = startRivers(viewer, toCurrentView);
+    metro = startMetro(viewer, byId("metro", HTMLInputElement), toCurrentView);
     viewer.addHandler("animation-finish", writeHash);
     viewer.addHandler("animation-finish", updateCorrectionLink);
     viewer.addHandler("animation", updateTilt);

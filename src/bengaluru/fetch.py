@@ -59,6 +59,8 @@ OVERPASS_TAGS = (
     '["name"]',
 )
 OSM_KEYS = tuple(tag.strip('[]"') for tag in OVERPASS_TAGS)
+# The tags that mark a metro line's route relation, open or being built.
+METRO_ROUTE_KEYS = ("route", "construction", "construction:route")
 
 
 def raw_dir(area: Area) -> Path:
@@ -79,14 +81,18 @@ def fetched(area: Area) -> bool:
 
 def overpass_query(area: Area) -> str:
     bbox = f"{area.south},{area.west},{area.north},{area.east}"
-    # Relations are limited to multipolygons: named routes span the continent.
+    # Relations are limited to multipolygons: named routes span the continent. The metro's
+    # routes are the exception, and come as tags and member ids alone.
     selectors = "".join(
         f'nw{tag}({bbox});rel["type"="multipolygon"]{tag}({bbox});' for tag in OVERPASS_TAGS
     )
+    routes = "".join(f'rel["type"="route"]["{key}"="subway"]({bbox});' for key in METRO_ROUTE_KEYS)
     return (
         "[out:json][timeout:180];"
         f"({selectors})->.features;"
         ".features out geom;"
+        f"({routes});"
+        "out body;"
         f'rel["boundary"="administrative"]({bbox});'
         f"out geom({bbox});"
     )
@@ -140,6 +146,7 @@ class _AreaExtract(osmium.SimpleHandler):
         self.region = area
         self.member_ways = member_ways
         self.member_points: dict[int, list[dict[str, float]]] = {}
+        self.kept_ways: set[int] = set()
         self.elements: list[dict] = []
 
     def _inside(self, lat: float, lon: float) -> bool:
@@ -168,10 +175,25 @@ class _AreaExtract(osmium.SimpleHandler):
         if wanted:
             self.member_points[way.id] = points
         if _is_kept(tags) and any(self._inside(p["lat"], p["lon"]) for p in points):
+            self.kept_ways.add(way.id)
             self.elements.append({"type": "way", "id": way.id, "tags": tags, "geometry": points})
+
+    def _metro_route(self, relation, tags: dict[str, str]) -> None:
+        """Keep a metro route that has track in the area: its tags and its members' ids."""
+        members = [
+            {"type": "way" if member.type == "w" else "node", "ref": member.ref}
+            for member in relation.members
+            if member.type in "wn"
+        ]
+        if any(m["type"] == "way" and m["ref"] in self.kept_ways for m in members):
+            self.elements.append(
+                {"type": "relation", "id": relation.id, "tags": tags, "members": members}
+            )
 
     def relation(self, relation) -> None:
         tags = dict(relation.tags)
+        if is_metro_route(tags):
+            self._metro_route(relation, tags)
         if tags.get("type") != "multipolygon" or not _is_kept(tags):
             return
         members = [
@@ -187,6 +209,13 @@ class _AreaExtract(osmium.SimpleHandler):
 
 def _is_kept(tags: dict[str, str]) -> bool:
     return any(key in tags for key in OSM_KEYS)
+
+
+def is_metro_route(tags: dict[str, str]) -> bool:
+    """Tell a metro line's route relation. A line only proposed has none of these tags."""
+    return tags.get("type") == "route" and any(
+        tags.get(key) == "subway" for key in METRO_ROUTE_KEYS
+    )
 
 
 def _cached(url: str, folder: str, label: str) -> Path:

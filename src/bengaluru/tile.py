@@ -8,6 +8,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
+import pyogrio
 import pyvips
 from pyproj import Transformer
 
@@ -18,6 +19,7 @@ from bengaluru.detail import (
     PROJECTION,
     RENDERED_VIEWS,
     SPRITE_DIR,
+    VIADUCT_M,
     _render_view,
     frames_dir,
     frames_fingerprint,
@@ -38,6 +40,7 @@ TILE_SUFFIX = ".webp[lossless=true,effort=4]"
 PYRAMID_DIR = "pyramid"
 VIEWS_RECORD = "views.json"
 FLOW_SIMPLIFY_M = 6.0
+METRO_SIMPLIFY_M = 2.0
 
 
 def tiles_dir(area: Area) -> Path:
@@ -95,19 +98,58 @@ def flow_lines(area: Area, x_offset: float, y_offset: float) -> list[dict]:
     ways = gpd.read_file(derived_path(area), layer="waterways")
     lines = []
     for row in ways.itertuples():
-        parts = (
-            row.geometry.geoms if row.geometry.geom_type == "MultiLineString" else [row.geometry]
-        )
-        for part in parts:
-            points = [
-                list(_to_canvas(x, y, x_offset, y_offset))
-                for x, y in part.simplify(FLOW_SIMPLIFY_M).coords
-            ]
+        for points in _polylines(row.geometry, FLOW_SIMPLIFY_M, x_offset, y_offset):
             line = {"width": round(row.width_m), "points": points}
             if row.waterway == "river" and isinstance(row.name, str) and len(points) > 1:
                 line["name"] = row.name
             lines.append(line)
     return lines
+
+
+def _polylines(geometry, tolerance_m: float, x_offset: float, y_offset: float) -> list[list]:
+    """Return a line, or each part of a broken one, simplified, as canvas points."""
+    return [
+        [list(_to_canvas(x, y, x_offset, y_offset)) for x, y in part.simplify(tolerance_m).coords]
+        for part in getattr(geometry, "geoms", [geometry])
+    ]
+
+
+def metro_index(area: Area, x_offset: float, y_offset: float) -> dict:
+    """Return the metro for the viewer: each track as a canvas polyline in its line's color,
+    and each station by name.
+
+    Positions are on the ground. `raised_px` is how far up the canvas the viewer moves
+    whatever is `raised`, to set it on the viaduct's deck. An area the metro does not
+    reach has no lines and no stations.
+    """
+    path = derived_path(area)
+    layers = set(pyogrio.list_layers(path)[:, 0])
+    lines, stations = [], []
+    if "metro" in layers:
+        for row in gpd.read_file(path, layer="metro").itertuples():
+            lines.extend(
+                {
+                    "line": row.line,
+                    # A route with no color tag reads back as a missing number.
+                    "colour": row.colour if isinstance(row.colour, str) else None,
+                    "open": bool(row.open),
+                    "level": row.level,
+                    "points": points,
+                }
+                for points in _polylines(row.geometry, METRO_SIMPLIFY_M, x_offset, y_offset)
+            )
+    if "stations" in layers:
+        for row in gpd.read_file(path, layer="stations").itertuples():
+            x, y = _to_canvas(row.geometry.x, row.geometry.y, x_offset, y_offset)
+            stations.append(
+                {"name": row.name, "x": x, "y": y, "open": bool(row.open), "level": row.level}
+            )
+    stations.sort(key=lambda station: (station["name"], station["x"]))
+    return {
+        "raised_px": round(VIADUCT_M * PROJECTION.lift, 1),
+        "lines": lines,
+        "stations": stations,
+    }
 
 
 def _tier(name: str, kind: str) -> int:
@@ -186,14 +228,16 @@ def _view_entry(area: Area, view: str, target: Path) -> dict:
 
 
 def _write_indexes(area: Area, target: Path, views: dict) -> None:
-    # Search and flow are written in the default view, which is planned but not rendered;
-    # the viewer converts them for the views it shows.
+    # Search, flow, and the metro are written in the default view, which is planned but
+    # not rendered; the viewer converts them for the views it shows.
     manifest = json.loads(manifest_path(area).read_text())
     entries = search_index(area, manifest["x_offset"], manifest["y_offset"])
     (target / "search.json").write_text(json.dumps(entries, ensure_ascii=False))
     (target / "credits.json").write_text(json.dumps(landmark_credits(), ensure_ascii=False))
     flow = flow_lines(area, manifest["x_offset"], manifest["y_offset"])
     (target / "flow.json").write_text(json.dumps(flow))
+    metro = metro_index(area, manifest["x_offset"], manifest["y_offset"])
+    (target / "metro.json").write_text(json.dumps(metro, ensure_ascii=False))
     (target / "manifest.json").write_text(json.dumps({**manifest, "views": views}))
     print(f"{len(entries)} search entries")
 

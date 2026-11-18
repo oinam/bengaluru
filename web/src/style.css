@@ -300,6 +300,14 @@ button:focus-visible,
   white-space: nowrap;
 }
 
+.settings label[hidden] {
+  display: none;
+}
+
+.settings label + label {
+  margin-top: 6px;
+}
+
 .settings input {
   margin: 0;
   accent-color: #8db9cd;
@@ -429,6 +437,7 @@ button:focus-visible,
 }
 
 .water,
+.metro,
 .still {
   position: absolute;
   inset: 0;

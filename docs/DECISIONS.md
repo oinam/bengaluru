@@ -449,3 +449,39 @@ deleting `main` and pushing it again is a force-push by another road.
 `SECURITY.md` asks for reports in private through brajeshwar.com. GitHub's private
 vulnerability reporting, which would add a "Report a vulnerability" button to the
 repository, is a setting of its own and was not turned on.
+
+## 2026-11-18 — The metro is a layer in the viewer
+
+Brajeshwar liked the metro drawn in its lines' colors with station names, the first
+lesson from Isometric Bengaluru in `docs/RESEARCH.md`. It is a layer the viewer draws
+over the map, not something rendered into the tiles, so it can be switched off and
+costs no render.
+
+- **Where the lines come from.** OpenStreetMap's route relations name the track of each
+  line and carry its name and color. `fetch` now keeps those relations, as tags and
+  member ids alone, from Overpass and from the Geofabrik extract. `prepare` writes two
+  layers, `metro` and `stations`, and `tile` writes them as `metro.json` beside
+  `flow.json`, in the default view's pixels like it.
+- **Open or being built** is the route's word, not the track's: a route in service makes
+  its track open whatever the way is tagged, because the relations are kept current and
+  the ways are not. Track being built is dashed. Lines only proposed (Orange, Red) have
+  no route of the kind kept, and are left out.
+- **Gaps are OpenStreetMap's.** Track no route names is not drawn: depots, crossovers,
+  and a few stretches a mapper has yet to add to a relation, about 2 km of the Blue
+  Line among them. The fix for those is upstream.
+- **Colors are OpenStreetMap's too**: `#e542de`, `#009933`, `yellow`, `#FF49A7`, `blue`.
+  The viewer uses them as given.
+- **Height.** Open track on a viaduct is lifted onto the deck the map draws, by
+  `raised_px`, the same in every view. Track in a tunnel is drawn faint, on the ground
+  above it. Track being built is drawn on the ground, since the map draws no viaduct
+  under it yet.
+- **In the viewer** the layer is on unless switched off in Settings, where "Metro
+  lines" appears only when the map has a `metro.json` with lines in it. Station names
+  show from an image zoom of 0.15. A station's name can appear twice close in, once
+  from this layer and once from the search labels; left so.
+- **Not done:** opening dates and the timeline. Fifteen of 329 metro ways carry a date,
+  so it needs a source of its own and a row in `docs/DATA.md`.
+
+Seen on the city build with an index made by hand from the same code:
+`out/bbmp/20261118-132647_metro-layer-city.jpg` and `…_metro-layer-mg-road.jpg`. The
+real index is written when the night prepares and builds `bbmp` again.

@@ -1,10 +1,10 @@
 import geopandas as gpd
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 
 from bengaluru.areas import Area
 from bengaluru.detail import PROJECTION
 from bengaluru.prepare import METRIC_CRS, derived_path
-from bengaluru.tile import _drop_old_pyramids, flow_lines, pyramid_version
+from bengaluru.tile import _drop_old_pyramids, flow_lines, metro_index, pyramid_version
 
 
 def test_pyramid_version_follows_the_frame_bytes(tmp_path):
@@ -36,6 +36,54 @@ def test_flow_lines_keep_the_drawn_direction(tmp_path, monkeypatch):
     assert line["width"] == 30
     assert line["points"] == [[10, 20], [round(a * 100 + 10), round(d * 100 + 20)]]
     assert line["name"] == "Test"
+
+
+def test_the_metro_index_carries_lines_and_stations_on_the_ground(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    area = Area("test", 0.0, 0.0, 1.0, 1.0)
+    path = derived_path(area)
+    path.parent.mkdir(parents=True)
+    gpd.GeoDataFrame(
+        {"line": ["Purple"], "colour": ["#e542de"], "open": [True], "level": ["raised"]},
+        geometry=[LineString([(0.0, 0.0), (100.0, 0.0)])],
+        crs=METRIC_CRS,
+    ).to_file(path, layer="metro", driver="GPKG")
+    gpd.GeoDataFrame(
+        {"name": ["Majestic"], "open": [True], "level": ["raised"]},
+        geometry=[Point(100.0, 0.0)],
+        crs=METRIC_CRS,
+    ).to_file(path, layer="stations", driver="GPKG")
+
+    index = metro_index(area, 10.0, 20.0)
+
+    a, _, d, _ = PROJECTION.matrix
+    end = [round(a * 100 + 10), round(d * 100 + 20)]
+    assert index["raised_px"] > 0
+    assert index["lines"] == [
+        {
+            "line": "Purple",
+            "colour": "#e542de",
+            "open": True,
+            "level": "raised",
+            "points": [[10, 20], end],
+        }
+    ]
+    assert index["stations"] == [
+        {"name": "Majestic", "x": end[0], "y": end[1], "open": True, "level": "raised"}
+    ]
+
+
+def test_the_metro_index_is_empty_where_there_is_no_metro(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    area = Area("test", 0.0, 0.0, 1.0, 1.0)
+    path = derived_path(area)
+    path.parent.mkdir(parents=True)
+    gpd.GeoDataFrame({"name": ["x"]}, geometry=[Point(0.0, 0.0)], crs=METRIC_CRS).to_file(
+        path, layer="pois", driver="GPKG"
+    )
+    index = metro_index(area, 0.0, 0.0)
+    assert index["lines"] == []
+    assert index["stations"] == []
 
 
 def test_flow_lines_name_rivers_only(tmp_path, monkeypatch):
