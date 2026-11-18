@@ -569,3 +569,14 @@ it needed no confirming from him. So these are picks, and his to change.
 
 The picture is `out/vidhana-soudha/20261118-151452_crop-cubbon-park-in-bloom-315.png`,
 with the four views of the test patch in `20261118-151447_four-views.png` beside it.
+
+## 2026-11-18 — One night at a time, and a night started early
+
+At 22:08 Brajeshwar, off to sleep, said to start the night's work early. It was started
+by hand with `--window 22:00-04:00`, appending to `logs/night.log` as launchd's run
+does. That lifts the 23:00 opening for this one night; the rule stands.
+
+launchd still starts its own run at 23:00, and two nights drawing the same area would
+write over each other's frames. So a night now takes a lock, `data/derived/night.lock`,
+before any work, and one that finds it held does nothing. It still sets the next
+night's wake first, which only the real window does, so the chain of wakes holds.
