@@ -34,7 +34,7 @@ function remember(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // the panel still works; it just opens in its default state next time
+    // The panel still works; it opens in its default state next time.
   }
 }
 
@@ -42,7 +42,7 @@ function forget(key: string): void {
   try {
     localStorage.removeItem(key);
   } catch {
-    // nothing was kept, so there is nothing to forget
+    // Nothing was kept, so there is nothing to forget.
   }
 }
 

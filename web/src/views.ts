@@ -1,6 +1,6 @@
 import { fromUtm, toUtm } from "./utm";
 
-// Where a view's image sits on the ground: image pixels = matrix × ground meters + offset.
+// Where a view's image sits on the ground: image pixels = matrix * ground meters + offset.
 export interface Frame {
   matrix: [number, number, number, number];
   x_offset: number;

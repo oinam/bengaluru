@@ -52,21 +52,23 @@ def pyramid_version(paths: list[Path], columns: int) -> str:
     return digest.hexdigest()
 
 
+def _to_canvas(x: float, y: float, x_offset: float, y_offset: float) -> tuple[int, int]:
+    """Return the canvas pixel a metric point lands on."""
+    a, b, d, e = PROJECTION.matrix
+    return round(a * x + b * y + x_offset), round(d * x + e * y + y_offset)
+
+
 def search_index(area: Area, x_offset: float, y_offset: float) -> list[dict]:
     """Return OSM names with their canvas positions, one entry per name and place."""
-    a, b, d, e = PROJECTION.matrix
     pois = gpd.read_file(derived_path(area), layer="pois")
     landmarks = landmark_positions(area)
     entries = {}
     for row in pois.itertuples():
-        x, y = row.geometry.x, row.geometry.y
-        px = round(a * x + b * y + x_offset)
-        py = round(d * x + e * y + y_offset)
         if row.name in landmarks:
             continue
-        key = (row.name, px // 200, py // 200)
+        px, py = _to_canvas(row.geometry.x, row.geometry.y, x_offset, y_offset)
         kind = row.kind or ""
-        entries[key] = {
+        entries[row.name, px // 200, py // 200] = {
             "name": row.name,
             "kind": kind,
             "x": px,
@@ -74,9 +76,8 @@ def search_index(area: Area, x_offset: float, y_offset: float) -> list[dict]:
             "tier": _tier(row.name, kind),
         }
     for name, (x, y) in landmarks.items():
-        px = round(a * x + b * y + x_offset)
-        py = round(d * x + e * y + y_offset)
-        entries[(name, "landmark")] = {
+        px, py = _to_canvas(x, y, x_offset, y_offset)
+        entries[name, "landmark"] = {
             "name": name,
             "kind": "landmark",
             "x": px,
@@ -91,7 +92,6 @@ def flow_lines(area: Area, x_offset: float, y_offset: float) -> list[dict]:
 
     Rivers carry their names, which the viewer labels along the stretch in view.
     """
-    a, b, d, e = PROJECTION.matrix
     ways = gpd.read_file(derived_path(area), layer="waterways")
     lines = []
     for row in ways.itertuples():
@@ -100,7 +100,7 @@ def flow_lines(area: Area, x_offset: float, y_offset: float) -> list[dict]:
         )
         for part in parts:
             points = [
-                [round(a * x + b * y + x_offset), round(d * x + e * y + y_offset)]
+                list(_to_canvas(x, y, x_offset, y_offset))
                 for x, y in part.simplify(FLOW_SIMPLIFY_M).coords
             ]
             line = {"width": round(row.width_m), "points": points}

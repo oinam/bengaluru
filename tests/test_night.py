@@ -110,9 +110,13 @@ def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monk
         done.append("prepare")
         stamp(stats_path(area))
 
+    def build(_area, deadline):
+        done.append("build")
+        return deadline > time.time()
+
     monkeypatch.setattr(night, "fetch", fetch)
     monkeypatch.setattr(night, "prepare", prepare)
-    monkeypatch.setattr(night, "build", lambda area, deadline: done.append("build") or True)
+    monkeypatch.setattr(night, "build", build)
     later = time.time() + 60
 
     assert night._work(before, later)

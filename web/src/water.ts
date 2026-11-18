@@ -49,7 +49,7 @@ function saveMotion(enabled: boolean): void {
   try {
     localStorage.setItem(MOTION_KEY, enabled ? "on" : "off");
   } catch {
-    // The choice just lasts for this visit.
+    // The choice lasts for this visit only.
   }
 }
 

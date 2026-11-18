@@ -128,7 +128,7 @@ function viewCenter(): OpenSeadragon.Point {
 function viewHash(): string {
   const center = viewCenter();
   const [lon, lat] = toLonLat(viewData(currentView), center.x, center.y);
-  const zoom = viewer.viewport.viewportToImageZoom(viewer.viewport.getZoom());
+  const zoom = imageZoom();
   const suffix = currentView === NORTH_UP_VIEW ? "" : `/${currentView}`;
   return `#${zoom.toFixed(3)}/${lat.toFixed(5)}/${lon.toFixed(5)}${suffix}`;
 }
@@ -163,7 +163,7 @@ function updateCorrectionLink(): void {
     "**How do you know?** (For example, you live nearby, or a public document says so.)",
     "",
     "",
-    "Please don't copy details from Google Maps or other proprietary maps; their licenses don't allow it.",
+    "Do not copy details from Google Maps or other proprietary maps; their licenses do not allow it.",
   ].join("\n");
   correctionLink.href = `${NEW_ISSUE_URL}?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
 }

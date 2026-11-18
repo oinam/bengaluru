@@ -120,7 +120,7 @@ def fetch_osm(area: Area, attempts: int = 8) -> tuple[Path, str]:
 
 
 class _RelationMembers(osmium.SimpleHandler):
-    """Collect the ways that make up multipolygons we keep."""
+    """Collect the ways that make up the multipolygons kept."""
 
     def __init__(self) -> None:
         super().__init__()

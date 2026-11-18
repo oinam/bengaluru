@@ -10,12 +10,13 @@ Two sets of pyramids go up. The ones the manifest on disk names are a whole buil
 the build rewrites the manifest only once every view is finished; they are what the index
 files publish. The ones of views finished since, which the next manifest will name, go up
 ahead of it. A view the build is about to draw again is left out. So it is safe to run
-while `bengaluru build` is still working or has stopped partway. With --pyramids-only
-only the second set goes, and it stops before the index files, which switch the live site
-over. With --until=HH:MM it starts no new
-pyramid after that local time. With --prune it then removes from R2 the pyramids the
-manifest no longer names: a rebuild of the whole city leaves 4 GB of them, and the bucket
-shares R2's free 10 GB with the Manipur map's.
+while `bengaluru build` is still working or has stopped partway.
+
+With --pyramids-only only the second set goes, and it stops before the index files, which
+switch the live site over. With --until=HH:MM it starts no new pyramid after that local
+time. With --prune it then removes from R2 the pyramids the manifest no longer names: a
+rebuild of the whole city leaves 4 GB of them, and the bucket shares R2's free 10 GB with
+the Manipur map's.
 
 Needs R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY in .env: an R2 API token with Object Read
 & Write on the bucket.

@@ -2,8 +2,7 @@
 
 Each view is shown whole, at the largest scale that keeps it under 4,608 px wide, labeled
 with the compass point at the top of the picture. It reads only the rendered tiles, so
-run `bengaluru build` first.
-Writes out/<area>/<stamp>_four-views.png.
+run `bengaluru build` first. Writes out/<area>/<stamp>_four-views.png.
 """
 
 import datetime as dt
@@ -30,14 +29,14 @@ def compass(matrix: list[float]) -> str:
     return "west" if d > 0 else "east"
 
 
+def column_count(level: Path) -> int:
+    return len({path.stem.split("_")[0] for path in level.glob("*.webp")})
+
+
 def whole_view(files: Path) -> Image.Image:
     level = max(int(path.name) for path in files.iterdir() if path.name.isdigit())
     # Each level down halves the picture; a level of one column is as far as this goes.
-    while (
-        level > 0
-        and len({path.stem.split("_")[0] for path in (files / str(level)).glob("*.webp")})
-        > VIEW_PX // TILE
-    ):
+    while level > 0 and column_count(files / str(level)) > VIEW_PX // TILE:
         level -= 1
     tiles = {
         tuple(int(part) for part in path.stem.split("_")): path
