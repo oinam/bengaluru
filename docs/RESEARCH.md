@@ -11,6 +11,10 @@ isometric pixel-art map of Bengaluru. The nearest thing is a commissioned illust
 map by Rod Hunt for the Bhartiya City development outside the city, which is neither
 pixel art nor of the city.
 
+Found 2026-11-18: Isometric Bengaluru by Vinay, published 2026-10-07. It is not a map of
+the city but four isometric data pieces about it; see "Isometric Bengaluru, the data
+pieces" below.
+
 ## Pixel Chennai
 
 https://pixelchennai.com/. Read from its own About text.
@@ -176,3 +180,56 @@ Sources: [Isometric Mumbai README](https://github.com/flash1405/isometric-mumbai
 [How to make isometric cities, Justin Chavez](https://www.justinchavez.com/blog/isometric-sf-how/),
 [Pixel Stanford's comparison table](https://github.com/aadityabuilds/isometric-pixxels),
 [H100 rental prices, October 2026](https://neurohive.io/en/guides/cloud-gpu-pricing/).
+
+## Isometric Bengaluru, the data pieces
+
+https://vinaydotblog.github.io/isometric-bengaluru/, repository
+`vinaydotblog/isometric-bengaluru`. Read 2026-11-18, the pages and the source, after
+Brajeshwar asked what we can learn from it.
+
+It is a different kind of thing from ours: four small isometric charts and a Delhi Metro
+companion, about 200 KB of hand-written HTML, CSS, and JavaScript with three.js from a
+CDN, made in one day (three commits on 2026-10-07). The layouts are schematic and say
+so. The repository has no license, so its ideas are open to us and its code is not.
+
+- Concrete Tide: land cover from 1973 to 2020 as a disc of cells, played as a film.
+- Namma Metro, Layered: every opening since 2011 on a timeline that can be scrubbed and
+  replayed; lines in their own colors, viaducts above a slab and tunnels glowing through
+  it, lines under construction dashed; a ledger of kilometers and stations; click a line
+  to hide it; three themes (night, dusk, paper).
+- Monsoon Almanac: IMD normals as rain gauges, in SVG projected by hand.
+- Lakhs of People: one cube per 100,000 people by census, colored by decade.
+
+What is worth taking, most useful first:
+
+1. **The metro as something to read.** Ours draws every track alike. Theirs gives each
+   line its color, names the stations, and shows what is being built. On our map that
+   is a layer in the viewer over the real viaducts, like the water's, so it needs no
+   new render. Our extract lacks what it needs: line colors sit on OSM's route
+   relations, which `fetch` drops, and only 15 of 329 metro ways in the central area
+   carry an opening date. The relations are in the Geofabrik file already on disk;
+   opening dates would need a source and a row in `docs/DATA.md`.
+2. **Time.** Their best idea is the scrubber: the same picture at different dates. Once
+   the lines have opening dates, "the metro in 2011, 2017, today" is the same layer with
+   a slider. The Blue Line to the airport, under construction, would meet the airport
+   the map is about to gain.
+3. **Kannada.** Their title is ಬೆಂಗಳೂರು and every piece carries its Kannada name; Pixel
+   Chennai does the same in Tamil. Our labels and search are English only. In the
+   central area's OSM data, 74% of named places, 94% of stations, and 85% of named roads
+   already have `name:kn`, so search and labels in both scripts need `prepare` to keep
+   that tag and the viewer to offer it.
+4. **A palette with a local reason.** Each piece takes its colors from something of the
+   city: kumkum, Mysore silk, tabebuia blossom, the metro's line colors. Our look is
+   still Manipur's. Bengaluru's flowering trees (pink tabebuia, purple jacaranda, red
+   gulmohar) among our 3.5 million green ones would be the plainest way to make the map
+   look like this city; it is a look decision, to be shown to Brajeshwar as options.
+5. **Numbers up front.** Every piece opens with one sentence of figures ("tree cover
+   fell from 68% to 3%") and offers its data as a table. Our About page states none of
+   ours: 1.9 million buildings, 3.5 million trees, 715 km of track.
+6. **Care in the small things.** A "read with care" note on what is schematic, palettes
+   checked for color-blind readers, a tooltip on everything. We say "may be inaccurate"
+   and have not checked our palette.
+
+What does not carry over: the three.js scenes are a few thousand objects, where our map
+is gigapixels of fixed tiles, and their themes repaint a scene in a frame, where a night
+palette for ours is a second render of the whole city.
