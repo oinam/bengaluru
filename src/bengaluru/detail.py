@@ -73,12 +73,14 @@ _EXTRA = (
 )
 SLOTS_32 = {**SLOT, **{name: len(SLOTS) + index for index, name in enumerate(_EXTRA)}}
 
-GROUND_CLASSES = ("tree", "shrub", "grass", "crop", "built", "bare", "wetland")
+GROUND_CLASSES = ("tree", "shrub", "grass", "built", "bare", "wetland")
+# WorldCover classes drawn as another: open water is OSM's to draw, and what it calls
+# cropland in this city is open grass, not fields.
+DRAWN_AS = {"water": "wetland", "crop": "grass"}
 SPECKLE = {
     "tree": "canopy_dark",
     "shrub": "tree",
     "grass": "shrub",
-    "crop": "grass",
     "built": "bare",
     "bare": "shadow_built",
     "wetland": "grass",
@@ -87,7 +89,6 @@ SHADOW = {
     "tree": "canopy_dark",
     "shrub": "tree",
     "grass": "shrub",
-    "crop": "grass",
     "built": "shadow_built",
     "bare": "shadow_built",
     "wetland": "shrub",
@@ -112,6 +113,10 @@ TREE_ODDS = {
 TREE_SPACING_M = 6.5
 MAJOR_ROADS = [name for name, slot in ROAD_SLOTS.items() if slot == "road_major"]
 SUN_U, SUN_D = 0.94, -0.34
+# Bengaluru builds flat concrete terraces. Of its small rectangular buildings this share
+# keeps a pitched roof, and of its flat roofs this share is bare concrete, not a color.
+PITCHED_PERCENT = 9
+CONCRETE_PERCENT = 85
 LOW_HOUSE_MAX_M2 = 160
 LOW_HOUSE_MAX_M = 4.4
 VERANDA_M = 1.5
@@ -137,10 +142,6 @@ FRAME_PX = 2048
 # Wider than the tallest building's lift, the ground blur, and any sprite, so frames join exactly.
 APRON_PX = 256
 WORKERS = 6
-PADDY_ANGLE = math.radians(17)
-PADDY_LENGTH_M = 44.0
-PADDY_WIDTH_M = 28.0
-PADDY_BUND_M = 1.1
 
 
 def _mix(first: str, second: str, amount: float) -> str:
@@ -235,7 +236,7 @@ def _paint_ground(layers: Layers, view: Viewport) -> np.ndarray:
     """Soften WorldCover's 10 m cells into ragged, speckled ground."""
     shapes = []
     for row in layers.ground.itertuples():
-        name = "wetland" if row.ground == "water" else row.ground
+        name = DRAWN_AS.get(row.ground, row.ground)
         if name in GROUND_CLASSES:
             shapes.append((row.geometry, GROUND_CLASSES.index(name) + 1))
     labels = _burn(shapes, view)
@@ -257,42 +258,7 @@ def _paint_ground(layers: Layers, view: Viewport) -> np.ndarray:
     chance = 0.05 + hash_field(xs // 9, ys // 9, 12) * 0.17
     marked = inside & (hash_field(xs, ys, 13) < chance)
     canvas[marked] = speckle[chosen[marked]]
-    crop = inside & (chosen == GROUND_CLASSES.index("crop"))
-    if crop.any():
-        _paint_paddy(canvas, crop, xs, ys)
     return canvas
-
-
-def _paint_paddy(canvas: np.ndarray, crop: np.ndarray, xs: np.ndarray, ys: np.ndarray) -> None:
-    """Draw fields on a world-anchored lattice; OSM maps no paddy boundaries here."""
-    a, b, d, e = PROJECTION.matrix
-    det = a * e - b * d
-    x = (e * xs - b * ys) / det
-    y = (-d * xs + a * ys) / det
-    along = x * math.cos(PADDY_ANGLE) + y * math.sin(PADDY_ANGLE)
-    across = -x * math.sin(PADDY_ANGLE) + y * math.cos(PADDY_ANGLE)
-    row = np.floor(across / PADDY_WIDTH_M)
-    shifted = along + hash_field(row, np.zeros_like(row), 40) * PADDY_LENGTH_M
-    column = np.floor(shifted / PADDY_LENGTH_M)
-    tone = hash_field(column, row, 41)
-    fields = np.select(
-        [tone < 0.42, tone < 0.78, tone < 0.93],
-        [SLOTS_32["crop"], SLOTS_32["canopy_light"], SLOTS_32["grass"]],
-        default=SLOTS_32["shrub"],
-    ).astype("uint8")
-    furrows = np.select(
-        [tone < 0.42, tone < 0.78, tone < 0.93],
-        [SLOTS_32["canopy_light"], SLOTS_32["grass"], SLOTS_32["shrub"]],
-        default=SLOTS_32["tree"],
-    ).astype("uint8")
-    canvas[crop] = fields[crop]
-    rows = crop & (np.floor(across * 1.2) % 3 == 0) & (hash_field(xs, ys, 42) < 0.7)
-    canvas[rows] = furrows[rows]
-    bund = crop & (
-        (shifted - column * PADDY_LENGTH_M < PADDY_BUND_M)
-        | (across - row * PADDY_WIDTH_M < PADDY_BUND_M)
-    )
-    canvas[bund] = SLOTS_32["bare"]
 
 
 def _paint_cemetery(canvas: np.ndarray, part: gpd.GeoDataFrame, view: Viewport) -> None:
@@ -545,7 +511,7 @@ def _classify(area: float, height: float, rectangular: bool, building_id: str, s
         return "block"
     if 100 <= area < 600 and rectangular and _hash(seed, building_id + "s", 100) < 45:
         return "shop"
-    if rectangular and _hash(seed, building_id + "p", 100) < 72:
+    if rectangular and _hash(seed, building_id + "p", 100) < PITCHED_PERCENT:
         return "house"
     return "flat"
 
@@ -729,7 +695,7 @@ def _paint_building(image, draw, view, polygon, height, building_id, seed, style
     if kind in ("house", "shed"):
         tin = (0, 1, 2, 3, 5)
         index = tin[index % len(tin)]
-    elif kind in ("block", "flat", "shop") and _hash(seed, building_id + "c", 10) < 6:
+    elif _hash(seed, building_id + "c", 100) < CONCRETE_PERCENT:
         index = 4
     slot = SLOTS_32[f"roof_{index}"]
     shade = SLOTS_32[f"roof_shade_{index}"]

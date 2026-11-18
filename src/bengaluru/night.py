@@ -11,8 +11,9 @@ from bengaluru.prepare import prepare, stats_path
 from bengaluru.tile import build
 
 NIGHT_WINDOW = "23:00-04:00"
-# What a night builds when it is not told, in this order: the city's center, then all of it.
-NIGHT_AREAS = ("central", "bbmp")
+# What a night builds when it is not told, in this order: the whole city, which the site
+# shows, then its center.
+NIGHT_AREAS = ("bbmp", "central")
 PMSET = "/usr/bin/pmset"
 # The Mac-wide permission to schedule a wake, shared by every project; see docs/WAKE.md.
 WAKE_RULE = Path("/etc/sudoers.d/claude-wake")

@@ -404,3 +404,26 @@ Brajeshwar's call, after the notes on Isometric Bengaluru in `docs/RESEARCH.md` 
 Kannada names in search and labels: no Kannada, the map stays in English for now. The
 data would allow it later (`name:kn` is on most named places, stations, and roads in
 OpenStreetMap), so this is a choice about the map, not a limit of its sources.
+
+## 2026-11-18 — The look: terraces and lawns
+
+Brajeshwar saw little between the four looks in
+`out/central/20261117-091959_look-options.png` and said to pick one. Picked: C.
+
+- **Roofs.** Of the small rectangular buildings, nine in a hundred keep a pitched roof
+  (`PITCHED_PERCENT`); the rest are flat. Of the flat roofs, 85 in a hundred are bare
+  concrete (`CONCRETE_PERCENT`) and the rest keep a color. Before, 72 in a hundred were
+  pitched tin in red, orange, and blue, which is Imphal.
+- **Cropland is grass.** WorldCover's cropland inside the city is the Race Course, the
+  golf course, and Palace Grounds, so it is drawn as grass and the paddy fields with
+  their bunds are gone from the renderer. The same rule draws the farmland around the
+  airport as grass, which is plainer than it is; fields there want a pattern of their
+  own, not Manipur's paddy.
+- **Not taken: the gray ground (D).** Gray between the buildings sits too close to the
+  concrete roofs and the walls, and the city loses its blocks. The sandy ground stays.
+
+Before and after are in `out/central/20261118-131533_look-c-before-after.png`. The
+change makes every built view stale, so the night of the 18th draws both areas again.
+
+The night now builds `bbmp` first and `central` after it. The site shows `bbmp`, and a
+night that runs short should run short on the area nobody is looking at.

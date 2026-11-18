@@ -61,7 +61,7 @@ usage = 'arg "[area]" default="central"'
 run = "uv run bengaluru tile --area ${usage_area}"
 
 [tasks.night]
-description = "Fetch, prepare, and build central and then bbmp, or the one area named, inside the 23:00 to 04:00 window; does nothing outside it"
+description = "Fetch, prepare, and build bbmp and then central, or the one area named, inside the 23:00 to 04:00 window; does nothing outside it"
 usage = 'arg "[area]" default=""'
 env = { PYTHONUNBUFFERED = "1" }
 run = "caffeinate -is uv run bengaluru night ${usage_area:+--area $usage_area}"

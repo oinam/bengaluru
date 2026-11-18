@@ -154,9 +154,9 @@ out right. These do not:
    face the viewer. Kanteerava Stadium shows its field. Before and after are in
    `out/vidhana-soudha/20261117-115500_courtyards-before-after.png`. A tree in the near
    half of a courtyard still stands in front of the wing that should hide its trunk.
-4. **The roofs are Imphal's.** Mid-size buildings get red, orange, and blue pitched tin
-   roofs. This part of Bengaluru is flat concrete terraces, with red tile only on the
-   older bungalows.
+4. ~~The roofs are Imphal's: red, orange, and blue pitched tin on mid-size buildings.~~
+   Changed on 2026-11-18: nine in a hundred small rectangular buildings keep a pitched
+   roof, and 85 in a hundred flat roofs are bare concrete.
 5. **The towers are tall cream boxes** with dotted windows: UB City and the towers north
    of the park. No glass, no setbacks, no repeated storeys.
 6. **Cubbon Park is one solid forest.** WorldCover calls nearly the whole park "trees",
@@ -165,9 +165,9 @@ out right. These do not:
 7. **The ground between buildings is sandy.** Manipur's color for built-up land reads as
    bare earth, which makes the office quarter look dusty.
 
-8. **Open ground inside the city is drawn as paddy.** WorldCover calls the Race Course,
-   the golf course, and some lawns "cropland", and Manipur's renderer draws cropland as
-   paddy fields with bunds. Seen in the central build, 2026-11-17.
+8. ~~Open ground inside the city is drawn as paddy.~~ Changed on 2026-11-18: what
+   WorldCover calls cropland is drawn as grass. The farmland north of the city, around
+   the airport, is drawn as grass too; a pattern for real fields is still to make.
 
 ## What this is
 

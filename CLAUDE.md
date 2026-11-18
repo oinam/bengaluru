@@ -6,8 +6,9 @@ https://manipur.oinam.com), and it starts from that project's pipeline and lesso
 
 **Status: the whole city is built.** Brajeshwar said go on 2026-11-17, and the central
 area and then the BBMP area were built that day, four views each; the viewer opens on
-BBMP. It is online at https://bengaluru.oinam.com since 2026-11-17. The look is still
-Manipur's and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
+BBMP. It is online at https://bengaluru.oinam.com since 2026-11-17. The look is
+Manipur's with Bengaluru's flat concrete roofs and lawns, chosen on 2026-11-18, and is
+his to change. Read `docs/PLAN.md` first; it is the brief, and its
 Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the
@@ -55,7 +56,7 @@ downloads off the internal disk.
 **Heavy work runs at night.** Builds, renders of the central or BBMP areas, tiling,
 uploads, and large downloads start at 23:00 IST and stop at 04:00, while Brajeshwar
 sleeps. Do not start one outside that window; give it to the night's work instead:
-`mise run night` builds `central` and then `bbmp`, does nothing outside the window, and
+`mise run night` builds `bbmp` and then `central`, does nothing outside the window, and
 stops when it closes, and a launchd agent starts it at 23:00. It builds a view again
 when the data or the drawing code (`detail.py`, `render.py`, `palettes.py`, the
 landmarks) has changed since, so a change made by day reaches the map overnight; expect
@@ -89,7 +90,7 @@ uv run bengaluru tile    --area vidhana-soudha  # builds each view's Deep Zoom p
 uv run python tools/four_views.py [area]        # lays the four built views side by side in one PNG in out/<area>/
 uv run python tools/crop.py central lalbagh 77.58691 12.94886 [view] [px]   # one frame of a built area centered on a place, into out/<area>/
 uv run python tools/look_options.py central 77.5790 12.9865   # one place in several candidate looks, side by side, for Brajeshwar to choose from; changes nothing
-mise run night [area]                           # the night's work: fetch, prepare, and build central then bbmp, or the one area, inside 23:00 to 04:00; nothing outside it
+mise run night [area]                           # the night's work: fetch, prepare, and build bbmp then central, or the one area, inside 23:00 to 04:00; nothing outside it
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
 mise run dev [area]                             # serves the viewer at http://localhost:8655 on out/<area>/tiles; bbmp, the whole city, by default
 mise run build [area]                           # type-checks and builds the viewer into web/dist, with the area's tiles linked in
