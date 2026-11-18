@@ -106,8 +106,9 @@ uv run ruff check . && uv run ruff format --check .   # lints and checks Python 
 ```
 
 The night's work wakes the Mac at 23:00 only if the Mac-wide permission in `docs/WAKE.md`
-is installed, which is Brajeshwar's to do. Never ask for, or add, any other passwordless
-`sudo`.
+is installed, which is Brajeshwar's to do. That file is about his Mac, not the map: it
+stays on this Mac at that path, git-ignored since 2026-11-18, and is not in the
+repository. Never ask for, or add, any other passwordless `sudo`.
 
 `frames` and `tile` came over from the Manipur pipeline and have not been run on their
 own here yet. Add each new command as it lands and keep this list current.

@@ -43,3 +43,6 @@ Thumbs.db
 *.swp
 *~
 .claude/
+
+# notes about this Mac, kept here and not published
+docs/WAKE.md
