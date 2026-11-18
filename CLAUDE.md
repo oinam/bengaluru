@@ -7,8 +7,8 @@ https://manipur.oinam.com), and it starts from that project's pipeline and lesso
 **Status: the whole city is built.** Brajeshwar said go on 2026-11-17, and the central
 area and then the BBMP area were built that day, four views each; the viewer opens on
 BBMP. It is online at https://bengaluru.oinam.com since 2026-11-17. The look is
-Manipur's with Bengaluru's flat concrete roofs and lawns, chosen on 2026-11-18, and is
-his to change. Read `docs/PLAN.md` first; it is the brief, and its
+Manipur's with Bengaluru's flat concrete roofs, lawns, and flowering trees, picked on
+2026-11-18 at his word, and is his to change. Read `docs/PLAN.md` first; it is the brief, and its
 Status section says where things stand.
 `docs/RESEARCH.md` is the prior art, `docs/DECISIONS.md` is what has been settled,
 `docs/DATA.md` is the register of every source we use, and `docs/PICKUP.md` holds the

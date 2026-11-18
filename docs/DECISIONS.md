@@ -536,3 +536,35 @@ money now. The choice between the two routes stands, a painted layer and not sat
 imagery, but nothing is started, no key or account is asked for, and the site's "zero
 cost" line stays true. The trial's steps and costs stay in `docs/PLAN.md` for when he
 takes it up.
+
+## 2026-11-18 — Flowering trees, in groves
+
+Set aside in the morning as "no options"; in the afternoon Brajeshwar said to do it if
+it needed no confirming from him. So these are picks, and his to change.
+
+- **Three trees.** Pink tabebuia, purple jacaranda, and red gulmohar, the three the
+  city is known for. Their colors are in `palettes.py` as `BLOSSOM`, picked by eye to
+  stand clear of the greens and of the tin roofs' reds. Each has a lighter shade for
+  where the sun falls, made the way the other shades are.
+- **In groves.** Avenues and parks plant one kind together, and salt and pepper across
+  the whole city read as noise. The ground is cut into 100 m squares (`GROVE_M`); 13 in
+  a hundred are in bloom with one kind (`GROVES_IN_BLOOM`), and in those half the trees
+  flower (`TREES_IN_BLOOM`). Each tree looks its square up from a spot up to 25 m off
+  its own, so a grove has a ragged edge and not a square one. On the test patch that is
+  1,963 of 30,871 trees, about one in sixteen.
+- **Which trees.** Decided by a hash of the tree's position and the seed, at painting
+  time, so the placed trees on disk are untouched and every view and every build
+  agrees. Nothing in the data says where a flowering tree stands; the About page and
+  the credits now list blossoms among what is illustrative.
+- **All at once.** Tabebuia flowers from January, jacaranda in March and April, and
+  gulmohar from April to June. The map shows the three together, which no month does.
+- **More than 32 colors.** The drawing held to 32 palette slots, a limit that came with
+  Manipur's code. Three blossoms and their light shades make 38. The table of slots is
+  now `DETAIL_SLOT`, and the test that held the count at 32 now holds it under the
+  slot kept for transparency.
+- **Checked.** In ten crops of the central area and the test patch, every pixel that
+  changed went from a lit green of a canopy to a blossom, and nothing else moved. A
+  flowering tree keeps its shape, its shadow, and its green in the shade.
+
+The picture is `out/vidhana-soudha/20261118-151452_crop-cubbon-park-in-bloom-315.png`,
+with the four views of the test patch in `20261118-151447_four-views.png` beside it.

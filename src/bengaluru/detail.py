@@ -28,7 +28,7 @@ from shapely.ops import substring
 from bengaluru.areas import Area
 from bengaluru.fetch import raw_dir
 from bengaluru.osm import load_features
-from bengaluru.palettes import PALETTE, SLOT, SLOTS, lookup
+from bengaluru.palettes import BLOSSOM, PALETTE, SLOT, SLOTS, lookup
 from bengaluru.prepare import METRIC_CRS, derived_path
 from bengaluru.render import (
     LINED_ROADS,
@@ -71,8 +71,10 @@ _EXTRA = (
     "water_light",
     "water_dark",
     "shadow_built",
+    *BLOSSOM,
+    *(f"{name}_light" for name in BLOSSOM),
 )
-SLOTS_32 = {**SLOT, **{name: len(SLOTS) + index for index, name in enumerate(_EXTRA)}}
+DETAIL_SLOT = {**SLOT, **{name: len(SLOTS) + index for index, name in enumerate(_EXTRA)}}
 
 GROUND_CLASSES = ("tree", "shrub", "grass", "built", "bare", "wetland")
 # WorldCover classes drawn as another: open water is OSM's to draw, and what it calls
@@ -112,8 +114,15 @@ TREE_ODDS = {
     "crop": 0.01,
 }
 TREE_SPACING_M = 6.5
-# The canopy radii the tree sprites are drawn in.
+# The canopy radii the tree sprites are drawn in, and how many shapes of tree there are.
 RADIUS_PX = (6, 7, 8, 9, 10, 12)
+TREE_SHAPES = 12
+# Flowering trees stand in groves, as avenues and parks plant them: of the squares this
+# wide, this share is in bloom with one kind of tree, and in those this share of the
+# trees flowers. The map shows every kind in bloom at once, which no month does.
+GROVE_M = 100.0
+GROVES_IN_BLOOM = 0.13
+TREES_IN_BLOOM = 0.5
 MAJOR_ROADS = [name for name, slot in ROAD_SLOTS.items() if slot == "road_major"]
 SUN_U, SUN_D = 0.94, -0.34
 # Bengaluru builds flat concrete terraces. Of its small rectangular buildings this share
@@ -166,11 +175,14 @@ def detail_colors() -> dict[str, str]:
     colors["water_light"] = _mix(PALETTE["water"], "#ffffff", 0.42)
     colors["water_dark"] = _mix(PALETTE["water"], PALETTE["background"], 0.42)
     colors["shadow_built"] = _mix(PALETTE["bare"], PALETTE["background"], 0.38)
+    for name, color in BLOSSOM.items():
+        colors[name] = color
+        colors[f"{name}_light"] = _mix(color, "#ffffff", 0.4)
     return colors
 
 
 def detail_lookup() -> bytes:
-    return lookup(detail_colors(), SLOTS_32)
+    return lookup(detail_colors(), DETAIL_SLOT)
 
 
 def hash_field(xs: np.ndarray, ys: np.ndarray, salt: int) -> np.ndarray:
@@ -251,10 +263,10 @@ def _paint_ground(layers: Layers, view: Viewport) -> np.ndarray:
     ).argmax(axis=0)
     inside = _burn([(layers.patch, 1)], view).astype(bool)
 
-    canvas = np.full((view.height, view.width), SLOTS_32["background"], dtype="uint8")
-    base = np.array([SLOTS_32[name] for name in GROUND_CLASSES], dtype="uint8")
+    canvas = np.full((view.height, view.width), DETAIL_SLOT["background"], dtype="uint8")
+    base = np.array([DETAIL_SLOT[name] for name in GROUND_CLASSES], dtype="uint8")
     canvas[inside] = base[chosen[inside]]
-    speckle = np.array([SLOTS_32[SPECKLE[name]] for name in GROUND_CLASSES], dtype="uint8")
+    speckle = np.array([DETAIL_SLOT[SPECKLE[name]] for name in GROUND_CLASSES], dtype="uint8")
     xs, ys = _global_grid(view)
     chance = 0.05 + hash_field(xs // 9, ys // 9, 12) * 0.17
     marked = inside & (hash_field(xs, ys, 13) < chance)
@@ -265,11 +277,11 @@ def _paint_ground(layers: Layers, view: Viewport) -> np.ndarray:
 def _paint_cemetery(canvas: np.ndarray, part: gpd.GeoDataFrame, view: Viewport) -> None:
     """Draw mown grass, a clipped hedge, and rows of grave markers."""
     mask = _burn([(geometry, 1) for geometry in part.geometry], view).astype(bool)
-    canvas[mask] = SLOTS_32["grass"]
+    canvas[mask] = DETAIL_SLOT["grass"]
     interior = mask.copy()
     for axis, shift in ((0, 3), (0, -3), (1, 3), (1, -3)):
         interior &= np.roll(mask, shift, axis=axis)
-    canvas[mask & ~interior] = SLOTS_32["tree"]
+    canvas[mask & ~interior] = DETAIL_SLOT["tree"]
     for geometry in part.geometry:
         for polygon in parts(geometry):
             center, u, v, length, width = _ground_axes(polygon)
@@ -284,8 +296,8 @@ def _paint_cemetery(canvas: np.ndarray, part: gpd.GeoDataFrame, view: Viewport) 
             for x, y in zip(xs[inside], ys[inside], strict=True):
                 col, row = _project(view, x, y, 0)
                 if 2 <= col < view.width - 2 and 2 <= row < view.height - 2:
-                    canvas[row - 1, col - 1 : col + 2] = SLOTS_32["wall_lit"]
-                    canvas[row, col - 1 : col + 2] = SLOTS_32["wall_shade"]
+                    canvas[row - 1, col - 1 : col + 2] = DETAIL_SLOT["wall_lit"]
+                    canvas[row, col - 1 : col + 2] = DETAIL_SLOT["wall_shade"]
 
 
 def _paint_surfaces(canvas: np.ndarray, surfaces: gpd.GeoDataFrame, view: Viewport) -> None:
@@ -295,7 +307,7 @@ def _paint_surfaces(canvas: np.ndarray, surfaces: gpd.GeoDataFrame, view: Viewpo
     for kind, slot in (("pitch", "grass"), ("paved", "road_minor")):
         part = surfaces[surfaces.kind == kind]
         mask = _burn([(geometry, 1) for geometry in part.geometry], view).astype(bool)
-        canvas[mask] = SLOTS_32[slot]
+        canvas[mask] = DETAIL_SLOT[slot]
 
 
 def _water_geometry(layers: Layers) -> list:
@@ -306,16 +318,16 @@ def _water_geometry(layers: Layers) -> list:
 def _paint_water(canvas: np.ndarray, layers: Layers, view: Viewport) -> None:
     water = _water_geometry(layers)
     banks = [(shapely.intersection(g.buffer(2.5), layers.patch), 1) for g in water]
-    canvas[_burn(banks, view).astype(bool)] = SLOTS_32["bare"]
+    canvas[_burn(banks, view).astype(bool)] = DETAIL_SLOT["bare"]
     wet = _burn([(g, 1) for g in water], view).astype(bool)
-    canvas[wet] = SLOTS_32["water"]
+    canvas[wet] = DETAIL_SLOT["water"]
 
     xs, ys = _global_grid(view)
     ripple = (ys % 6 == 0) & (xs % 11 < 6) & (hash_field(xs // 11, ys, 21) < 0.3)
-    canvas[wet & ripple] = SLOTS_32["water_light"]
+    canvas[wet & ripple] = DETAIL_SLOT["water_light"]
     above = np.roll(wet, 2, axis=0)
     above[:2, :] = False
-    canvas[wet & ~above] = SLOTS_32["water_dark"]
+    canvas[wet & ~above] = DETAIL_SLOT["water_dark"]
 
 
 def _dashes(line: LineString, on_m: float = 4.0, off_m: float = 6.0) -> list:
@@ -333,27 +345,27 @@ def _paint_roads(canvas: np.ndarray, layers: Layers, view: Viewport) -> None:
     major = roads[roads.road_class.isin(MAJOR_ROADS)]
     walks = major.geometry.buffer(major.width_m / 2 + FOOTPATH_M, cap_style="flat")
     walk_mask = _burn([(g.intersection(layers.patch), 1) for g in walks], view).astype(bool)
-    canvas[walk_mask] = SLOTS_32["road_track"]
+    canvas[walk_mask] = DETAIL_SLOT["road_track"]
 
     shapes = []
     for road_class in ROAD_ORDER:
         part = roads[roads.road_class == road_class]
-        slot = SLOTS_32[ROAD_SLOTS.get(road_class, "road_minor")]
+        slot = DETAIL_SLOT[ROAD_SLOTS.get(road_class, "road_minor")]
         bodies = part.geometry.buffer(part.width_m / 2, cap_style="flat")
         shapes.extend((g.intersection(layers.patch), slot) for g in bodies)
     burned = _burn(shapes, view)
     painted = burned > 0
     canvas[painted] = burned[painted]
 
-    majors = burned == SLOTS_32["road_major"]
+    majors = burned == DETAIL_SLOT["road_major"]
     interior = majors.copy()
     for axis, shift in ((0, 1), (0, -1), (1, 1), (1, -1)):
         interior &= np.roll(majors, shift, axis=axis)
-    canvas[majors & ~interior] = SLOTS_32["road_minor"]
+    canvas[majors & ~interior] = DETAIL_SLOT["road_minor"]
 
     lined = roads[roads.road_class.isin(LINED_ROADS)]
     marks = [(g.intersection(layers.patch), 1) for line in lined.geometry for g in _dashes(line)]
-    canvas[_burn(marks, view).astype(bool)] = SLOTS_32["road_line"]
+    canvas[_burn(marks, view).astype(bool)] = DETAIL_SLOT["road_line"]
 
 
 def _paint_rails(canvas: np.ndarray, rails: gpd.GeoDataFrame, patch, view: Viewport) -> None:
@@ -365,15 +377,15 @@ def _paint_rails(canvas: np.ndarray, rails: gpd.GeoDataFrame, patch, view: Viewp
     beds = [
         (line.buffer(RAIL_BED_M / 2, cap_style="flat").intersection(patch), 1) for line in lines
     ]
-    canvas[_burn(beds, view).astype(bool)] = SLOTS_32["road_track"]
+    canvas[_burn(beds, view).astype(bool)] = DETAIL_SLOT["road_track"]
     ties = [
         (substring(line, at, at + 1.0).buffer(1.6, cap_style="flat").intersection(patch), 1)
         for line in lines
         for at in np.arange(0.0, line.length, RAIL_TIE_EVERY_M)
     ]
-    canvas[_burn(ties, view).astype(bool)] = SLOTS_32["shadow_built"]
+    canvas[_burn(ties, view).astype(bool)] = DETAIL_SLOT["shadow_built"]
     tracks = [(line.buffer(0.5, cap_style="flat").intersection(patch), 1) for line in lines]
-    canvas[_burn(tracks, view).astype(bool)] = SLOTS_32["background"]
+    canvas[_burn(tracks, view).astype(bool)] = DETAIL_SLOT["background"]
 
 
 def _turn() -> tuple[float, float]:
@@ -419,10 +431,10 @@ def _windows(draw, view, p, q, top, lit, shutters: bool) -> None:
     count = int(length / 3.0)
     if count < 1:
         return
-    color = SLOTS_32["road_major"] if lit else SLOTS_32["background"]
+    color = DETAIL_SLOT["road_major"] if lit else DETAIL_SLOT["background"]
     start = 0
     if shutters:
-        shutter = SLOTS_32["road_minor"] if lit else SLOTS_32["road_major"]
+        shutter = DETAIL_SLOT["road_minor"] if lit else DETAIL_SLOT["road_major"]
         for index in range(count):
             t0 = (index + 0.15) / count
             t1 = (index + 0.85) / count
@@ -457,11 +469,11 @@ def _paint_walls(draw, view, ring, top, gable_top, shutters, windows) -> None:
         length = float(np.linalg.norm(q - p))
         if normal_depth < 0 and length > 0:
             edges.append((-_depth(*((p + q) / 2)), index, p, q, normal_u < 0))
-    outline = SLOTS_32["background"]
+    outline = DETAIL_SLOT["background"]
     edges.sort(key=lambda edge: edge[0])
     visible = {edge[1] for edge in edges}
     for _, index, p, q, lit in edges:
-        fill = SLOTS_32["wall_lit" if lit else "wall_shade"]
+        fill = DETAIL_SLOT["wall_lit" if lit else "wall_shade"]
         quad = [
             _project(view, *p, 0),
             _project(view, *q, 0),
@@ -528,7 +540,7 @@ def _paint_pitched(draw, view, polygon, height, slot, shade, windows, ribbed) ->
     gables = dict.fromkeys((1, 3), ridge)
     _paint_walls(draw, view, closed, eave, gables, False, windows)
 
-    outline = SLOTS_32["background"]
+    outline = DETAIL_SLOT["background"]
     faces = [(a, b, right, left), (d, c, right, left)]
     faces.sort(key=lambda face: -_depth(*((face[0] + face[1]) / 2)))
     for near0, near1, top1, top0 in faces:
@@ -574,13 +586,13 @@ def _paint_low_house(draw, view, polygon, height, slot, shade) -> None:
             _project(view, *(a + out), VERANDA_OUTER_M),
         ],
         fill=shade,
-        outline=SLOTS_32["background"],
+        outline=DETAIL_SLOT["background"],
     )
     for t in np.linspace(0.08, 0.92, 4):
         post = a + (b - a) * t + out
         draw.line(
             [_project(view, *post, 0), _project(view, *post, VERANDA_OUTER_M)],
-            fill=SLOTS_32["wall_shade"],
+            fill=DETAIL_SLOT["wall_shade"],
         )
 
 
@@ -618,7 +630,7 @@ def _paint_courtyards(image, view, polygon, height, behind, box, shutters, windo
             [_project(local, x, y, height) for x, y in hole.coords], fill=255
         )
         ImageDraw.Draw(floor).polygon([_project(local, x, y, 0) for x, y in hole.coords], fill=255)
-    layer = Image.new(image.mode, behind.size, SLOTS_32["wall_shade"])
+    layer = Image.new(image.mode, behind.size, DETAIL_SLOT["wall_shade"])
     layer.paste(behind, (0, 0), floor)
     walls = ImageDraw.Draw(layer)
     for hole in polygon.interiors:
@@ -634,9 +646,9 @@ def _paint_flat(image, draw, view, polygon, height, slot, shade, kind, building_
     box = _courtyard_box(image, view, polygon, height)
     behind = image.crop(box) if box else None
     _paint_walls(draw, view, ring, height, None, shutters, windows)
-    outline = SLOTS_32["background"]
+    outline = DETAIL_SLOT["background"]
     points = [_project(view, x, y, height) for x, y in ring]
-    draw.polygon(points, fill=SLOTS_32["wall_lit"], outline=outline)
+    draw.polygon(points, fill=DETAIL_SLOT["wall_lit"], outline=outline)
     inner = polygon.buffer(-0.7, join_style="mitre")
     if not inner.is_empty and inner.geom_type == "Polygon":
         draw.polygon(
@@ -651,8 +663,8 @@ def _paint_flat(image, draw, view, polygon, height, slot, shade, kind, building_
     if polygon.area >= WATER_TANK_MIN_M2 and _hash(seed, building_id + "t", 3) < 2:
         center = polygon.representative_point()
         x, y = _project(view, center.x, center.y, height)
-        draw.rectangle([x - 2, y - 6, x + 2, y - 1], fill=SLOTS_32["background"])
-        draw.line([(x - 2, y - 6), (x + 2, y - 6)], fill=SLOTS_32["roof_shade_1"])
+        draw.rectangle([x - 2, y - 6, x + 2, y - 1], fill=DETAIL_SLOT["background"])
+        draw.line([(x - 2, y - 6), (x + 2, y - 6)], fill=DETAIL_SLOT["roof_shade_1"])
 
 
 def _ground_axes(polygon):
@@ -683,8 +695,8 @@ def _paint_building(image, draw, view, polygon, height, building_id, seed, style
         index = TIN_ROOFS[index % len(TIN_ROOFS)]
     elif _hash(seed, building_id + "c", 100) < CONCRETE_PERCENT:
         index = CONCRETE_ROOF
-    slot = SLOTS_32[f"roof_{index}"]
-    shade = SLOTS_32[f"roof_shade_{index}"]
+    slot = DETAIL_SLOT[f"roof_{index}"]
+    shade = DETAIL_SLOT[f"roof_shade_{index}"]
     if kind == "house" and area < LOW_HOUSE_MAX_M2:
         _paint_low_house(draw, view, polygon, height, slot, shade)
     elif kind in ("house", "shed"):
@@ -698,20 +710,26 @@ def _paint_span(draw, view, piece: LineString, deck) -> None:
     pier = piece.interpolate(0.5, normalized=True)
     x, foot = _project(view, pier.x, pier.y, 0)
     _, head = _project(view, pier.x, pier.y, VIADUCT_M - VIADUCT_DECK_M)
-    draw.rectangle([x - 1, head, x + 1, foot], fill=SLOTS_32["wall_shade"])
-    draw.line([(x - 1, head), (x - 1, foot)], fill=SLOTS_32["wall_lit"])
+    draw.rectangle([x - 1, head, x + 1, foot], fill=DETAIL_SLOT["wall_shade"])
+    draw.line([(x - 1, head), (x - 1, foot)], fill=DETAIL_SLOT["wall_lit"])
     top = [_project(view, x, y, VIADUCT_M) for x, y in deck.exterior.coords]
     under = [_project(view, x, y, VIADUCT_M - VIADUCT_DECK_M) for x, y in deck.exterior.coords]
     side = shapely.MultiPoint(top + under).convex_hull
     if side.geom_type == "Polygon":
-        draw.polygon(list(side.exterior.coords), fill=SLOTS_32["wall_shade"])
-    draw.polygon(top, fill=SLOTS_32["wall_lit"])
+        draw.polygon(list(side.exterior.coords), fill=DETAIL_SLOT["wall_shade"])
+    draw.polygon(top, fill=DETAIL_SLOT["wall_lit"])
     track = [_project(view, x, y, VIADUCT_M) for x, y in piece.coords]
-    draw.line(track, fill=SLOTS_32["road_major"])
+    draw.line(track, fill=DETAIL_SLOT["road_major"])
 
 
-def _tree_sprite(radius: int, seed: int) -> tuple[Image.Image, Image.Image, int]:
-    """Return (sprite, mask, crown_center_y) for a shaded canopy with a short trunk."""
+def _tree_sprite(
+    radius: int, seed: int, blossom: str | None = None
+) -> tuple[Image.Image, Image.Image, int]:
+    """Return (sprite, mask, crown_center_y) for a shaded canopy with a short trunk.
+
+    A tree in blossom wears its flowers where the sun falls and stays green in the shade.
+    """
+    lit, lightest = (blossom, f"{blossom}_light") if blossom else ("shrub", "canopy_light")
     width = 2 * radius + 3
     crown_h = int(radius * 1.7)
     height = crown_h + 6
@@ -732,15 +750,15 @@ def _tree_sprite(radius: int, seed: int) -> tuple[Image.Image, Image.Image, int]
         distance = ((xs - lump_x) ** 2 + ((ys - lump_y) / 0.88) ** 2) / lump_r**2
         field = np.maximum(field, 1.0 - distance)
     crown = field > 0
-    sprite = np.full(xs.shape, SLOTS_32["canopy_dark"], dtype="uint8")
+    sprite = np.full(xs.shape, DETAIL_SLOT["canopy_dark"], dtype="uint8")
     light = (-(xs - cx) * 0.55 - (ys - cy) * 0.83) / radius + field * 0.35
     jitter = hash_field(xs + seed, ys, 31) * 0.26
-    sprite[light + jitter > 0.05] = SLOTS_32["tree"]
-    sprite[light + jitter > 0.42] = SLOTS_32["shrub"]
-    sprite[light + jitter > 0.78] = SLOTS_32["canopy_light"]
+    sprite[light + jitter > 0.05] = DETAIL_SLOT["tree"]
+    sprite[light + jitter > 0.42] = DETAIL_SLOT[lit]
+    sprite[light + jitter > 0.78] = DETAIL_SLOT[lightest]
     trunk = (np.abs(xs - cx) <= 1) & (ys > crown_h - 2)
     mask = crown | trunk
-    sprite[trunk & ~crown] = SLOTS_32["background"]
+    sprite[trunk & ~crown] = DETAIL_SLOT["background"]
     return (
         Image.fromarray(sprite),
         Image.fromarray(mask.astype("uint8") * 255),
@@ -764,7 +782,7 @@ def _tree_points(
     x = grid_x.ravel() + rng.uniform(-2.6, 2.6, grid_x.size)
     y = grid_y.ravel() + rng.uniform(-2.6, 2.6, grid_x.size)
     roll = rng.uniform(0, 1, grid_x.size)
-    variant = rng.integers(0, 12, grid_x.size)
+    variant = rng.integers(0, TREE_SHAPES, grid_x.size)
 
     keep = np.zeros(x.size, dtype=bool)
     for row in layers.ground.itertuples():
@@ -779,7 +797,7 @@ def _tree_points(
         for distance in np.arange(0.0, line.length, 8.0):
             point = line.interpolate(float(distance))
             if layers.patch.contains(point):
-                extra.append((point.x, point.y, int(distance) % 12))
+                extra.append((point.x, point.y, int(distance) % TREE_SHAPES))
     array = np.column_stack([x[keep], y[keep], variant[keep]]).astype("float64")
     if extra:
         array = np.vstack([array, np.array(extra, dtype="float64")])
@@ -936,7 +954,12 @@ def build_scene(
     frames["rails"] = grounded
     indexes = {name: shapely.STRtree(frame.geometry.values) for name, frame in frames.items()}
     indexes["spans"] = shapely.STRtree([deck for _, deck in spans])
-    sprites = [_tree_sprite(RADIUS_PX[index % 6], seed + index) for index in range(12)]
+    # Every shape in green first, then again in each blossom, in BLOSSOM's order.
+    sprites = [
+        _tree_sprite(RADIUS_PX[index % 6], seed + index, blossom)
+        for blossom in (None, *BLOSSOM)
+        for index in range(TREE_SHAPES)
+    ]
     return Scene(local, surfaces, trees, sprites, landmarks, seed, indexes, styles, grounded, spans)
 
 
@@ -1024,6 +1047,18 @@ def _add_spans(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) 
         items.append((-_depth(center.x, center.y), f"span/{index:07d}", SPAN, piece, deck))
 
 
+def _blossoms(trees: np.ndarray, seed: int) -> np.ndarray:
+    """Return for each tree 0 if it is green, or the number of its blossom, from 1."""
+    x, y = trees[:, 0] * 10, trees[:, 1] * 10
+    tree = hash_field(x, y, seed + 43)
+    # Each tree finds its grove from a spot a little off its own, so a grove's edge is ragged.
+    east = trees[:, 0] + (hash_field(x, y, seed + 45) - 0.5) * GROVE_M / 2
+    north = trees[:, 1] + (hash_field(x, y, seed + 47) - 0.5) * GROVE_M / 2
+    grove = hash_field(east // GROVE_M, north // GROVE_M, seed + 41)
+    kind = 1 + (grove / GROVES_IN_BLOOM * len(BLOSSOM)).astype("int64")
+    return np.where((grove < GROVES_IN_BLOOM) & (tree < TREES_IN_BLOOM), kind, 0)
+
+
 def _add_trees(items: list, shadows: list, scene: Scene, view: Viewport) -> None:
     trees = scene.trees
     screen_x, screen_y = _screen(view, trees[:, 0], trees[:, 1])
@@ -1033,12 +1068,14 @@ def _add_trees(items: list, shadows: list, scene: Scene, view: Viewport) -> None
         & (screen_y > -40)
         & (screen_y < view.height + 60)
     )
-    for x, y, variant in trees[nearby]:
+    seen = trees[nearby]
+    for (x, y, variant), blossom in zip(seen, _blossoms(seen, scene.seed), strict=True):
         index = int(variant)
         radius_m = RADIUS_PX[index % 6] / PROJECTION.lift * 0.95
         dx, dy = _sun_offset(radius_m * 0.9)
         shadows.append((Point(x + dx, y + dy).buffer(radius_m * 0.9, quad_segs=4), 1))
-        items.append((-_depth(x, y), f"tree/{x:.2f}/{y:.2f}", TREE, (x, y), index))
+        sprite = index + TREE_SHAPES * int(blossom)
+        items.append((-_depth(x, y), f"tree/{x:.2f}/{y:.2f}", TREE, (x, y), sprite))
 
 
 def _add_landmarks(items: list, shadows: list, landmarks: list[dict]) -> None:
@@ -1054,8 +1091,8 @@ def _darken_shadows(canvas: np.ndarray, shadows: list, view: Viewport) -> None:
     mask = _burn(shadows, view).astype(bool)
     remap = np.arange(256, dtype="uint8")
     for name, darker in SHADOW.items():
-        remap[SLOTS_32[name]] = SLOTS_32[darker]
-    inside = mask & (canvas != SLOTS_32["background"])
+        remap[DETAIL_SLOT[name]] = DETAIL_SLOT[darker]
+    inside = mask & (canvas != DETAIL_SLOT["background"])
     canvas[inside] = remap[canvas[inside]]
 
 
@@ -1083,10 +1120,10 @@ def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) 
 
 
 def render_detail(scene: Scene, view: Viewport) -> np.ndarray:
-    """Return a uint8 array of 32 palette slots."""
+    """Return a uint8 array of palette slots."""
     quad = _view_quad(view)
     if not quad.intersects(scene.layers.patch):
-        return np.full((view.height, view.width), SLOTS_32["background"], dtype="uint8")
+        return np.full((view.height, view.width), DETAIL_SLOT["background"], dtype="uint8")
     local = _local_layers(scene, quad)
     surfaces = _select(scene.surfaces, scene.indexes["surfaces"], quad)
     landmarks = _visible_landmarks(scene, view)
@@ -1095,7 +1132,7 @@ def render_detail(scene: Scene, view: Viewport) -> np.ndarray:
     _paint_surfaces(canvas, surfaces, view)
     for landmark in landmarks:
         clearing = Point(landmark["x"], landmark["y"]).buffer(landmark["clearing"] * 0.6)
-        canvas[_burn([(clearing, 1)], view).astype(bool)] = SLOTS_32["bare"]
+        canvas[_burn([(clearing, 1)], view).astype(bool)] = DETAIL_SLOT["bare"]
     _paint_water(canvas, local, view)
     _paint_roads(canvas, local, view)
     _paint_rails(canvas, _select(scene.rails, scene.indexes["rails"], quad), local.patch, view)

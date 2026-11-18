@@ -128,6 +128,9 @@ CANDIDATES = {
 }
 
 PALETTE = CANDIDATES["monsoon"]
+# The city's flowering trees, by the tree that wears each color: pink tabebuia, purple
+# jacaranda, and red gulmohar. Picked by eye to stand clear of monsoon's greens and roofs.
+BLOSSOM = {"tabebuia": "#e88fb5", "jacaranda": "#9b87d9", "gulmohar": "#e4572e"}
 
 
 def lookup(palette: dict[str, str], slots: dict[str, int] = SLOT) -> bytes:

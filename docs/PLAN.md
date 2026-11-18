@@ -4,13 +4,14 @@
 
 *18 November 2026. The whole city is built and online, four views, and the viewer opens
 on BBMP (`mise run dev`, http://localhost:8655). The build that is live is the night of
-the 17th's: Manipur's look, courtyards open, the north edge at 13.14 N. Four things
+the 17th's: Manipur's look, courtyards open, the north edge at 13.14 N. Five things
 changed on the 18th and wait for the night to draw them, all in one build: the north
 edge moved to 13.23 N to take in the airport; the look became Bengaluru's, flat concrete
 roofs and lawns for paddy (`20261118-131533_look-c-before-after.png` in `out/central/`);
 the metro's lines and stations are prepared for the viewer to draw in their colors
-(`20261118-132647_metro-layer-city.jpg` in `out/bbmp/`); and the drawing code was
-tidied without moving a pixel. The night builds `bbmp` first, then `central`. "What
+(`20261118-132647_metro-layer-city.jpg` in `out/bbmp/`); the drawing code was tidied
+without moving a pixel; and about one tree in sixteen flowers, in groves of pink, purple,
+and red (`20261118-151452_crop-cubbon-park-in-bloom-315.png` in `out/vidhana-soudha/`). The night builds `bbmp` first, then `central`. "What
 looks wrong" below is the list still to choose from. Phase 0's frames of the test patch
 are in `out/vidhana-soudha/`.*
 

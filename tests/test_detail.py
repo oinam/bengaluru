@@ -10,13 +10,14 @@ from PIL import Image, ImageDraw
 from bengaluru.areas import get_area
 from bengaluru.detail import (
     DEFAULT_VIEW,
+    DETAIL_SLOT,
     FRAME_PX,
     LANDMARKS_PATH,
     RENDERED_VIEWS,
-    SLOTS_32,
     STYLE_PAINTERS,
     TRANSPARENT,
     VIEWS,
+    _blossoms,
     _paint_flat,
     _paint_low_house,
     _paint_pitched,
@@ -31,6 +32,7 @@ from bengaluru.detail import (
     render_frame,
     view_projection,
 )
+from bengaluru.palettes import BLOSSOM
 from bengaluru.render import PROJECTION_B, Layers, centered_viewport
 
 
@@ -47,11 +49,24 @@ def sample_layers():
     return Layers(patch, ground, water, empty, empty, buildings)
 
 
-def test_detail_palette_stays_within_the_limit():
+def test_detail_palette_gives_every_slot_a_color_and_leaves_transparency_alone():
     colors = detail_colors()
-    assert set(colors) == set(SLOTS_32)
-    assert len(SLOTS_32) <= 32
-    assert sorted(SLOTS_32.values()) == list(range(len(SLOTS_32)))
+    assert set(colors) == set(DETAIL_SLOT)
+    assert sorted(DETAIL_SLOT.values()) == list(range(len(DETAIL_SLOT)))
+    assert len(DETAIL_SLOT) <= TRANSPARENT
+
+
+def test_some_trees_flower_in_groves_and_the_same_ones_every_time():
+    rng = np.random.default_rng(3)
+    trees = np.column_stack([rng.uniform(0, 3000, (20000, 2)), rng.integers(0, 12, 20000)])
+    kinds = _blossoms(trees, 7)
+    assert np.array_equal(kinds, _blossoms(trees, 7))
+    assert np.array_equal(kinds[:500], _blossoms(trees[:500], 7))
+    assert set(np.unique(kinds).tolist()) == set(range(len(BLOSSOM) + 1))
+    assert 0.03 < (kinds > 0).mean() < 0.1
+    # Trees in bloom stand together: most squares of the grid have none at all.
+    squares = {(x // 100, y // 100) for x, y, _ in trees[kinds > 0]}
+    assert len(squares) < 0.5 * 30 * 30
 
 
 def test_detail_render_is_deterministic_and_grows_trees():
@@ -61,14 +76,14 @@ def test_detail_render_is_deterministic_and_grows_trees():
     first = render_detail(scene, view)
     assert np.array_equal(first, render_detail(scene, view))
     painted = set(np.unique(first).tolist())
-    assert {SLOTS_32["canopy_light"], SLOTS_32["water"], SLOTS_32["wall_lit"]} <= painted
+    assert {DETAIL_SLOT["canopy_light"], DETAIL_SLOT["water"], DETAIL_SLOT["wall_lit"]} <= painted
 
 
 @pytest.mark.parametrize("path", sorted(Path("assets/sprites").glob("*.png")))
 def test_landmark_sprites_use_only_palette_slots_and_transparency(path):
     values = set(np.unique(np.asarray(Image.open(path))).tolist())
     assert TRANSPARENT in values
-    assert values - {TRANSPARENT} <= set(SLOTS_32.values())
+    assert values - {TRANSPARENT} <= set(DETAIL_SLOT.values())
 
 
 def test_every_landmark_style_has_a_painter_and_a_reference():
@@ -133,7 +148,7 @@ def test_the_site_shows_four_quarter_turns_north_up_first():
 def test_low_house_veranda_reaches_past_the_plain_roof():
     view = centered_viewport(PROJECTION_B, 0, 0, 200, 200)
     polygon = shapely.box(-6, -3, 6, 3)
-    background = SLOTS_32["grass"]
+    background = DETAIL_SLOT["grass"]
     plain = Image.new("L", (200, 200), background)
     _paint_pitched(ImageDraw.Draw(plain), view, polygon, 4.4, 1, 2, True, True)
     with_veranda = Image.new("L", (200, 200), background)
@@ -146,7 +161,7 @@ def test_a_courtyard_shows_the_ground_and_its_far_walls():
     view = centered_viewport(PROJECTION_B, 0, 0, 300, 300)
     block = shapely.box(-40, -40, 40, 40)
     hole = shapely.box(-25, -25, 25, 25)
-    ground = SLOTS_32["grass"]
+    ground = DETAIL_SLOT["grass"]
     image = Image.new("L", (300, 300), ground)
     _paint_flat(
         image, ImageDraw.Draw(image), view, block.difference(hole), 9.0, 1, 2, "flat", "b", 0
@@ -164,7 +179,7 @@ def test_a_courtyard_shows_the_ground_and_its_far_walls():
     inside = np.asarray(opening).astype(bool)
     # The far inner walls take the top of the opening; the floor shows below them.
     assert 0 < int((drawn[inside] == ground).sum()) < int(inside.sum())
-    assert SLOTS_32["wall_lit"] in drawn[inside]
+    assert DETAIL_SLOT["wall_lit"] in drawn[inside]
     assert np.array_equal(drawn[lid == ground], lid[lid == ground])
 
 

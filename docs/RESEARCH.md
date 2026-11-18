@@ -225,7 +225,8 @@ What is worth taking, most useful first:
    still Manipur's. Bengaluru's flowering trees (pink tabebuia, purple jacaranda, red
    gulmohar) among our 3.5 million green ones would be the plainest way to make the map
    look like this city; it is a look decision, to be shown to Brajeshwar as options.
-   Not taken up: on 2026-11-18 he said no options.
+   Taken up on 2026-11-18, without options: he said to do it if it needed no
+   confirming from him, and the groves are in `docs/DECISIONS.md`.
 5. **Numbers up front.** Every piece opens with one sentence of figures ("tree cover
    fell from 68% to 3%") and offers its data as a table. Our About page states none of
    ours: 1.9 million buildings, 3.5 million trees, 715 km of track.
