@@ -509,6 +509,7 @@ nears grass for red- and green-blind readers (9 to 10) and the Pink Line nears w
 for red-blind ones (5), which is what the dark casing around every line is for.
 
 A fix for the first two is a palette change, so it is Brajeshwar's to ask for.
+He read this the same day and asked for none, so the palette stays.
 
 ## 2026-11-18 — The drawing code, tidied without moving a pixel
 

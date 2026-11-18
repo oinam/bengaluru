@@ -230,6 +230,7 @@ What is worth taking, most useful first:
 5. **Numbers up front.** Every piece opens with one sentence of figures ("tree cover
    fell from 68% to 3%") and offers its data as a table. Our About page states none of
    ours: 1.9 million buildings, 3.5 million trees, 715 km of track.
+   Not taken up: on 2026-11-18 Brajeshwar said to leave them off the About page.
 6. **Care in the small things.** A "read with care" note on what is schematic, palettes
    checked for color-blind readers, a tooltip on everything. We say "may be inaccurate"
    and have not checked our palette. Checked on 2026-11-18 with
