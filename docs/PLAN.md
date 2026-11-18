@@ -38,6 +38,37 @@ a five-hour window; what does not fit carries on the next night, and the live ma
 as it is until all four views are done and uploaded. The numbers below are the first
 build's and are due an update once the taller one is built, as are the README's.
 
+### Next: an AI-painted layer, as a trial
+
+On 2026-11-18 Brajeshwar chose to try a painted layer over the code-drawn map, the way
+Pixel Chennai does it, and not to pursue satellite imagery from NSIL. Nothing is bought
+or built yet. The code-drawn map stays the map: the painted layer is a second set of
+tiles beside it, switched on in the viewer, and the pipeline's three rules hold for
+everything under it.
+
+The trial is one patch, `vidhana-soudha`, north up, about 30 megapixels:
+
+1. **Teacher tiles.** Forty to eighty 1024 px tiles of our render, repainted by a
+   frontier image model from a fixed prompt. About $5 to $20. Needs an API key with
+   billing, which is Brajeshwar's to make, and a row in `docs/DATA.md` for the
+   provider's terms on its output before a tile is kept.
+2. **A student.** A LoRA for a small open model, FLUX.2 klein 4B or Qwen-Image-Edit,
+   trained on those pairs: about an hour of a rented GPU, $2 to $5. This Mac, an M1 Pro
+   with 16 GB, cannot train or run either at a useful speed, so the GPU is rented by
+   the hour; that needs an account with a GPU host, also his to make.
+3. **Paint the patch.** About 60 tiles with overlap, under a dollar of GPU time, joined
+   into a pyramid. Exit: a PNG of the patch, painted and code-drawn side by side, in
+   `out/vidhana-soudha/`, and a count of what the model made up.
+4. **Go or no-go**, his. The whole city in four views is $40 to $160 of GPU time by the
+   estimate in `docs/RESEARCH.md`, and the checking by eye is the larger cost.
+
+What a painted layer strains, to be settled before step 3 and written in
+`docs/DECISIONS.md`: it is repeatable only with the model, its weights, the seed, and
+the prompt pinned, and not bit for bit across hardware (rule 3); the model was trained
+on images of every kind, though nothing photographic of Bengaluru goes in (rule 1); and
+it invents detail the data does not hold, so the About page has to say which layer is
+which. The site's "zero cost" line stops being true the day the first dollar is spent.
+
 ### BBMP numbers, 2026-11-17
 
 The `bbmp` area: 12.83–13.14 N, 77.46–77.78 E, 34.7 × 34.3 km, about 1,190 km².
@@ -186,7 +217,8 @@ Pixel Chennai and Isometric Mumbai repaint a code-drawn map with an image model,
 needs a GPU and costs more the bigger the city. The Manipur map showed that the
 procedural render stands on its own, and Bengaluru is better mapped than Imphal: dense
 OpenStreetMap, full Open Buildings coverage with heights, many named lakes and parks.
-The AI layer stays parked (see `CLAUDE.md`).
+The AI layer was parked until 2026-11-18, when Brajeshwar chose to try one; see "Next:
+an AI-painted layer, as a trial" above.
 
 ## Honest expectations
 
@@ -293,7 +325,9 @@ labels, credits, link preview, zoom film. Exit: Brajeshwar is happy to post it.
 **Phase 3 — BBMP.** Widen to the full box. Exit: the full build fits on disk and
 finishes overnight, and the seams are invisible.
 
-**Phase 4 — Parked.** AI restyle. Only with a GPU and appetite.
+**Phase 4 — An AI-painted layer, as a trial.** Parked until 2026-11-18. One small patch
+first, on rented GPU time, and a go or no-go from Brajeshwar before any more. The steps
+are under "Next: an AI-painted layer, as a trial" in Status.
 
 ## Tripwires
 

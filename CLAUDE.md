@@ -139,9 +139,12 @@ The usual Oinam convention, once Brajeshwar creates the files:
 - Queue: `~/_/Oinam/1-Projects/devCommands/bengaluru.md`
 - Log:   `~/_/Oinam/1-Projects/devLogs/bengaluru.md`
 
-## Things that are explicitly parked
+## The AI-painted layer: a trial, no longer parked
 
-AI restyling of the render with an image model (the Pixel Chennai and Isometric Mumbai
-route). It needs a GPU Brajeshwar does not have yet, and its cost grows with area. Do not
-build toward it or let it shape the architecture; the procedural map must stand on its
-own.
+AI restyling of the render with an image model (the Pixel Chennai route) was parked
+until 2026-11-18, when Brajeshwar chose to try it. It is a trial on the test patch
+first; the steps and their costs are in `docs/PLAN.md` under "Next: an AI-painted
+layer, as a trial". The procedural map must still stand on its own: a painted layer is
+a second set of tiles beside it, never a stage the map depends on. Spending money,
+making an account, and entering a key are his to do, each time. Every model and
+provider gets a row in `docs/DATA.md` before its output is kept.

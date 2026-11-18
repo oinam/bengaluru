@@ -427,3 +427,14 @@ change makes every built view stale, so the night of the 18th draws both areas a
 
 The night now builds `bbmp` first and `central` after it. The site shows `bbmp`, and a
 night that runs short should run short on the area nobody is looking at.
+
+## 2026-11-18 — An AI-painted layer will be tried; satellite imagery will not
+
+Brajeshwar's call, after the cost comparisons in `docs/RESEARCH.md`: no email to NSIL
+about Cartosat imagery, and a trial of an AI-painted layer instead. This lifts the
+parking of that route in `CLAUDE.md`. It is a trial on the test patch, by Pixel
+Chennai's method, with our own render as the only thing the model is shown; the steps,
+costs, and what is his to do are in `docs/PLAN.md`. The code-drawn map stays the base
+and the painted tiles sit beside it, so nothing here changes the pipeline yet.
+
+The same day he set two ideas aside: flowering-tree palettes, and Kannada names.
