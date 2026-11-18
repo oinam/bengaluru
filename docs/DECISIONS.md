@@ -365,3 +365,35 @@ the area's, and prepares again when the stats are older than the fetch. The buil
 already drew every view again when the prepared data changed. The three areas on disk
 got their `bounds.json` by hand that morning, with the bounds they were fetched for.
 The taller area needs a second Open Buildings cell, `3bb1`, 274 MB.
+
+## 2026-11-18 — The repository is public: what was checked
+
+Brajeshwar made `oinam/bengaluru` public, so the site's links to it work, and asked that
+the code be formatted and linted and its security looked after.
+
+- **Format and lint.** Nothing needed changing: `ruff check`, `ruff format --check`, the
+  tests, and the viewer's `tsc`, ESLint, and Prettier all passed, and CI runs them on
+  every push. Ruff's security rules, run once by hand, flag only test asserts and the
+  argument-list calls to `rclone`, `pmset`, and `sudo`.
+- **Secrets.** `.env` was never committed, the history holds no key or token, and
+  GitHub's secret scanning, turned on that day with push protection, found none. The
+  Cloudflare account ID in `web/wrangler.jsonc` and `tools/upload_tiles.py` is an
+  identifier, not a secret.
+- **The workflow.** Its jobs now get read-only access to the repository, where GitHub's
+  default here was write, and each action is pinned to a commit instead of a tag that
+  can be moved, since `deploy` holds the Cloudflare token. A pull request from a fork
+  runs lint and tests without secrets, and a first-time contributor's run waits for
+  approval. Updating an action is now a deliberate edit of its commit.
+- **Dependencies.** `pip-audit` found nothing in the Python lock. `pnpm audit` found ten
+  advisories against Vite 7.1.12, all in its dev server, which is the one on this Mac;
+  Vite is now 7.3.7. Two remain with no fix to take, in `minimatch` and `picomatch`
+  under `typescript-eslint`: both are slow-pattern bugs in a linter that reads only our
+  own files.
+- **The site.** It sends `X-Content-Type-Options: nosniff` and a referrer policy. It
+  has no accounts, cookies, or forms, and the viewer writes names from the search index
+  as text, never as HTML. A content security policy was left out: it would name the
+  tiles' domain in one more place, and a wrong one blanks the map on a push with no
+  way to try it first.
+
+Not done, and his to ask for: a rule on GitHub that blocks force-pushes to `main`, and
+a `SECURITY.md` saying where to report a problem.
