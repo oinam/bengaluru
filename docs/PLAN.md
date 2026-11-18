@@ -44,15 +44,16 @@ metro layer reads. The viewer code for that layer is committed and reaches the s
 with the next push; until then, and on a map without the index, the site shows no
 metro layer and no switch for it.
 
-### Next: an AI-painted layer, as a trial
+### Parked: an AI-painted layer
 
-On 2026-11-18 Brajeshwar chose to try a painted layer over the code-drawn map, the way
-Pixel Chennai does it, and not to pursue satellite imagery from NSIL. Nothing is bought
-or built yet. The code-drawn map stays the map: the painted layer is a second set of
-tiles beside it, switched on in the viewer, and the pipeline's three rules hold for
-everything under it.
+On 2026-11-18 Brajeshwar chose a painted layer over the code-drawn map, the way Pixel
+Chennai does it, over satellite imagery from NSIL, and the same day parked it: later,
+and no money now. Nothing was bought or built. What follows is what a trial would take,
+kept for the day he takes it up. The code-drawn map stays the map: a painted layer is a
+second set of tiles beside it, switched on in the viewer, and the pipeline's three
+rules hold for everything under it.
 
-The trial is one patch, `vidhana-soudha`, north up, about 30 megapixels:
+The trial would be one patch, `vidhana-soudha`, north up, about 30 megapixels:
 
 1. **Teacher tiles.** Forty to eighty 1024 px tiles of our render, repainted by a
    frontier image model from a fixed prompt. About $5 to $20. Needs an API key with
@@ -223,8 +224,8 @@ Pixel Chennai and Isometric Mumbai repaint a code-drawn map with an image model,
 needs a GPU and costs more the bigger the city. The Manipur map showed that the
 procedural render stands on its own, and Bengaluru is better mapped than Imphal: dense
 OpenStreetMap, full Open Buildings coverage with heights, many named lakes and parks.
-The AI layer was parked until 2026-11-18, when Brajeshwar chose to try one; see "Next:
-an AI-painted layer, as a trial" above.
+The AI layer is parked; see "Parked: an AI-painted layer" above for what a trial would
+take.
 
 ## Honest expectations
 
@@ -331,9 +332,9 @@ labels, credits, link preview, zoom film. Exit: Brajeshwar is happy to post it.
 **Phase 3 — BBMP.** Widen to the full box. Exit: the full build fits on disk and
 finishes overnight, and the seams are invisible.
 
-**Phase 4 — An AI-painted layer, as a trial.** Parked until 2026-11-18. One small patch
-first, on rented GPU time, and a go or no-go from Brajeshwar before any more. The steps
-are under "Next: an AI-painted layer, as a trial" in Status.
+**Phase 4 — An AI-painted layer, as a trial.** Parked, and it costs money, so it waits
+for Brajeshwar. One small patch first, on rented GPU time, and a go or no-go from him
+before any more. The steps are under "Parked: an AI-painted layer" in Status.
 
 ## Tripwires
 

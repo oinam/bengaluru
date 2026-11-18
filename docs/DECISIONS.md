@@ -528,3 +528,11 @@ Three things went public as placeholders and were Brajeshwar's to settle: the "R
 map CC BY-SA 4.0" line in Credits, the 16 places in the Go to list, and the metro
 viaduct drawn as a cream deck on piers. His word on all three: keep them, for now. They
 are no longer open questions, and each is still his to change.
+
+## 2026-11-18 — The AI-painted layer is parked again
+
+Hours after choosing to try it, Brajeshwar put the painted layer off: later, and no
+money now. The choice between the two routes stands, a painted layer and not satellite
+imagery, but nothing is started, no key or account is asked for, and the site's "zero
+cost" line stays true. The trial's steps and costs stay in `docs/PLAN.md` for when he
+takes it up.

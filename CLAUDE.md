@@ -140,12 +140,13 @@ The usual Oinam convention, once Brajeshwar creates the files:
 - Queue: `~/_/Oinam/1-Projects/devCommands/bengaluru.md`
 - Log:   `~/_/Oinam/1-Projects/devLogs/bengaluru.md`
 
-## The AI-painted layer: a trial, no longer parked
+## The AI-painted layer: parked
 
-AI restyling of the render with an image model (the Pixel Chennai route) was parked
-until 2026-11-18, when Brajeshwar chose to try it. It is a trial on the test patch
-first; the steps and their costs are in `docs/PLAN.md` under "Next: an AI-painted
-layer, as a trial". The procedural map must still stand on its own: a painted layer is
-a second set of tiles beside it, never a stage the map depends on. Spending money,
-making an account, and entering a key are his to do, each time. Every model and
-provider gets a row in `docs/DATA.md` before its output is kept.
+AI restyling of the render with an image model (the Pixel Chennai route) is parked.
+On 2026-11-18 Brajeshwar chose it over satellite imagery and, the same day, put it off:
+later, and no money now. Do not start it, price it again, or ask for a key until he
+brings it up. What a trial on the test patch would take is kept in `docs/PLAN.md` under
+"Parked: an AI-painted layer". When it comes back, the procedural map must still stand
+on its own: a painted layer is a second set of tiles beside it, never a stage the map
+depends on. Spending money, making an account, and entering a key are his to do, each
+time. Every model and provider gets a row in `docs/DATA.md` before its output is kept.
