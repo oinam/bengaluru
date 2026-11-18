@@ -208,7 +208,8 @@ What is worth taking, most useful first:
    new render. Our extract lacks what it needs: line colors sit on OSM's route
    relations, which `fetch` drops, and only 15 of 329 metro ways in the central area
    carry an opening date. The relations are in the Geofabrik file already on disk;
-   opening dates would need a source and a row in `docs/DATA.md`.
+   opening dates would need a source and a row in `docs/DATA.md`. Taken up on
+   2026-11-18, without the dates; see `docs/DECISIONS.md`.
 2. **Time.** Their best idea is the scrubber: the same picture at different dates. Once
    the lines have opening dates, "the metro in 2011, 2017, today" is the same layer with
    a slider. The Blue Line to the airport, under construction, would meet the airport
@@ -224,12 +225,14 @@ What is worth taking, most useful first:
    still Manipur's. Bengaluru's flowering trees (pink tabebuia, purple jacaranda, red
    gulmohar) among our 3.5 million green ones would be the plainest way to make the map
    look like this city; it is a look decision, to be shown to Brajeshwar as options.
+   Not taken up: on 2026-11-18 he said no options.
 5. **Numbers up front.** Every piece opens with one sentence of figures ("tree cover
    fell from 68% to 3%") and offers its data as a table. Our About page states none of
    ours: 1.9 million buildings, 3.5 million trees, 715 km of track.
 6. **Care in the small things.** A "read with care" note on what is schematic, palettes
    checked for color-blind readers, a tooltip on everything. We say "may be inaccurate"
-   and have not checked our palette.
+   and have not checked our palette. Checked on 2026-11-18 with
+   `tools/colorblind.py`; see `docs/DECISIONS.md`.
 
 What does not carry over: the three.js scenes are a few thousand objects, where our map
 is gigapixels of fixed tiles, and their themes repaint a scene in a frame, where a night

@@ -485,3 +485,27 @@ costs no render.
 Seen on the city build with an index made by hand from the same code:
 `out/bbmp/20261118-132647_metro-layer-city.jpg` and `…_metro-layer-mg-road.jpg`. The
 real index is written when the night prepares and builds `bbmp` again.
+
+## 2026-11-18 — The palette, checked for color-blind readers
+
+Brajeshwar asked for the check. `tools/colorblind.py` draws one frame as protanopia,
+deuteranopia, and tritanopia see it (Machado and others, 2009, at full severity) and
+lists the colors that mean something on the map and sit less than 12 apart in L*a*b*
+for some viewer. The sheet is `out/vidhana-soudha/20261118-133357_colorblind.png`.
+
+The map holds up, and nothing was changed. Trees, grass, ground, roads, walls, and
+water differ in lightness as well as hue, so they stay apart when red and green do
+not: the trees turn olive and the ground stays sand. What merges:
+
+- **Wetland** with bare ground, footpaths, and built ground for red-blind readers (6 to
+  12), and with grass for blue-blind ones (6). Wetland is rare in the city.
+- **Footpaths and bare ground** for everyone (2). They are nearly one color in the
+  palette, which came from Manipur; a path across open ground does not show.
+- **Roofs** lose their reds, which are decoration and carry no meaning.
+
+The metro's five line colors stay apart for every viewer; the closest pair is Purple
+and Pink, 36 for typical vision and 19 for blue-blind. Against the map, the Green Line
+nears grass for red- and green-blind readers (9 to 10) and the Pink Line nears water
+for red-blind ones (5), which is what the dark casing around every line is for.
+
+A fix for the first two is a palette change, so it is Brajeshwar's to ask for.
