@@ -8,7 +8,7 @@ import pytest
 from bengaluru import night
 from bengaluru.areas import Area
 from bengaluru.fetch import bounds_path, raw_dir
-from bengaluru.night import NIGHT_WINDOW, closing_time, next_opening, schedule_wake
+from bengaluru.night import NIGHT_WINDOW, alone, closing_time, next_opening, schedule_wake
 from bengaluru.prepare import stats_path
 
 
@@ -85,6 +85,15 @@ def test_a_wake_is_set_once_for_the_opening(tmp_path, monkeypatch):
     monkeypatch.setattr(night.subprocess, "run", already)
     schedule_wake(at(16, "23:00"))
     assert all(command[0] != "sudo" for command in already.commands)
+
+
+def test_only_one_night_works_at_a_time(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    first = alone()
+    assert first is not None
+    assert alone() is None
+    first.close()
+    assert alone() is not None
 
 
 def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monkeypatch):

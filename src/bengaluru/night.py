@@ -1,9 +1,11 @@
 """The night's work: heavy jobs run while Brajeshwar sleeps and stop before he wakes."""
 
 import datetime as dt
+import fcntl
 import subprocess
 import time
 from pathlib import Path
+from typing import IO
 
 from bengaluru.areas import Area
 from bengaluru.fetch import fetch, fetched, raw_dir
@@ -14,6 +16,8 @@ NIGHT_WINDOW = "23:00-04:00"
 # What a night builds when it is not told, in this order: the whole city, which the site
 # shows, then its center.
 NIGHT_AREAS = ("bbmp", "central")
+# Held by the night at work, so one started early and the one launchd starts do not both draw.
+LOCK = Path("data/derived/night.lock")
 PMSET = "/usr/bin/pmset"
 # The Mac-wide permission to schedule a wake, shared by every project; see docs/WAKE.md.
 WAKE_RULE = Path("/etc/sudoers.d/claude-wake")
@@ -61,12 +65,28 @@ def schedule_wake(opens: dt.datetime) -> None:
         print(f"night: could not set a wake for {opens:%H:%M}: {asked.stderr.strip()}")
 
 
+def alone() -> IO | None:
+    """Take the night's lock and return it, or None if another night holds it.
+
+    The lock lasts as long as the file stays open, and ends with the process.
+    """
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    held = LOCK.open("w")
+    try:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        held.close()
+        return None
+    return held
+
+
 def night(areas: list[Area], window: str = NIGHT_WINDOW) -> None:
     """Fetch, prepare, and build each area in turn, each step only if it is not done or its
     inputs have changed, inside the window.
 
-    Started outside the window, as when the Mac wakes late, it does nothing. No step
-    starts once the window has closed, and the build stops at its next frame.
+    Started outside the window, as when the Mac wakes late, it does nothing, and nothing
+    while another night is at work. No step starts once the window has closed, and the
+    build stops at its next frame.
     """
     now = dt.datetime.now()
     # Fixed before anything reads the drive, which can hold a first read for hours.
@@ -80,6 +100,10 @@ def night(areas: list[Area], window: str = NIGHT_WINDOW) -> None:
         raise SystemExit("night: the external drive is not plugged in; nothing started")
     if closes is None:
         print("night: outside the window; nothing started")
+        return
+    held = alone()
+    if held is None:
+        print("night: another night is at work; nothing started")
         return
     deadline = closes.timestamp()
     for area in areas:
