@@ -438,3 +438,14 @@ costs, and what is his to do are in `docs/PLAN.md`. The code-drawn map stays the
 and the painted tiles sit beside it, so nothing here changes the pipeline yet.
 
 The same day he set two ideas aside: flowering-tree palettes, and Kannada names.
+
+## 2026-11-18 — No force-pushes to main, and where to report a problem
+
+At Brajeshwar's word, GitHub now holds a ruleset on `oinam/bengaluru`, "main: no
+force-pushes": it blocks force-pushes to, and deletion of, the default branch, for
+everyone, with no bypass. An ordinary push is untouched. Deletion is in it because
+deleting `main` and pushing it again is a force-push by another road.
+
+`SECURITY.md` asks for reports in private through brajeshwar.com. GitHub's private
+vulnerability reporting, which would add a "Report a vulnerability" button to the
+repository, is a setting of its own and was not turned on.
