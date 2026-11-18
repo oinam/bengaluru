@@ -1,4 +1,4 @@
-"""Semantic color slots, the Phase 0 placeholder palette, and candidate palettes."""
+"""Semantic color slots and the candidate palettes; monsoon is the one in use."""
 
 SLOTS = (
     "background",
@@ -130,10 +130,9 @@ CANDIDATES = {
 PALETTE = CANDIDATES["monsoon"]
 
 
-def lookup(palette: dict[str, str]) -> bytes:
-    """Return a 768-byte PIL palette with colors in slot order."""
+def lookup(palette: dict[str, str], slots: dict[str, int] = SLOT) -> bytes:
+    """Return a 768-byte PIL palette with each color at its slot."""
     values = bytearray(768)
-    for index, name in enumerate(SLOTS):
-        color = palette[name].lstrip("#")
-        values[index * 3 : index * 3 + 3] = bytes.fromhex(color)
+    for name, index in slots.items():
+        values[index * 3 : index * 3 + 3] = bytes.fromhex(palette[name].lstrip("#"))
     return bytes(values)

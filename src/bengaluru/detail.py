@@ -28,7 +28,7 @@ from shapely.ops import substring
 from bengaluru.areas import Area
 from bengaluru.fetch import raw_dir
 from bengaluru.osm import load_features
-from bengaluru.palettes import PALETTE, SLOT, SLOTS
+from bengaluru.palettes import PALETTE, SLOT, SLOTS, lookup
 from bengaluru.prepare import METRIC_CRS, derived_path
 from bengaluru.render import (
     LINED_ROADS,
@@ -42,6 +42,7 @@ from bengaluru.render import (
     centered_viewport,
     full_viewport,
     load_layers,
+    parts,
 )
 
 # Areas whose detail frame is centered somewhere other than their own center, as (lon, lat).
@@ -111,12 +112,17 @@ TREE_ODDS = {
     "crop": 0.01,
 }
 TREE_SPACING_M = 6.5
+# The canopy radii the tree sprites are drawn in.
+RADIUS_PX = (6, 7, 8, 9, 10, 12)
 MAJOR_ROADS = [name for name, slot in ROAD_SLOTS.items() if slot == "road_major"]
 SUN_U, SUN_D = 0.94, -0.34
 # Bengaluru builds flat concrete terraces. Of its small rectangular buildings this share
 # keeps a pitched roof, and of its flat roofs this share is bare concrete, not a color.
 PITCHED_PERCENT = 9
 CONCRETE_PERCENT = 85
+# Roof colors by palette slot: the ones a tin roof comes in, and bare concrete.
+TIN_ROOFS = (0, 1, 2, 3, 5)
+CONCRETE_ROOF = 4
 LOW_HOUSE_MAX_M2 = 160
 LOW_HOUSE_MAX_M = 4.4
 VERANDA_M = 1.5
@@ -164,11 +170,7 @@ def detail_colors() -> dict[str, str]:
 
 
 def detail_lookup() -> bytes:
-    colors = detail_colors()
-    values = bytearray(768)
-    for name, index in SLOTS_32.items():
-        values[index * 3 : index * 3 + 3] = bytes.fromhex(colors[name].lstrip("#"))
-    return bytes(values)
+    return lookup(detail_colors(), SLOTS_32)
 
 
 def hash_field(xs: np.ndarray, ys: np.ndarray, salt: int) -> np.ndarray:
@@ -233,28 +235,27 @@ def _box_blur(array: np.ndarray, radius: int) -> np.ndarray:
 
 
 def _paint_ground(layers: Layers, view: Viewport) -> np.ndarray:
-    """Soften WorldCover's 10 m cells into ragged, speckled ground."""
+    """Soften WorldCover's 10 m cells into rounded, speckled ground."""
     shapes = []
     for row in layers.ground.itertuples():
         name = DRAWN_AS.get(row.ground, row.ground)
         if name in GROUND_CLASSES:
             shapes.append((row.geometry, GROUND_CLASSES.index(name) + 1))
     labels = _burn(shapes, view)
-    xs, ys = _global_grid(view)
-    noise = hash_field(xs // 3, ys // 3, 11)
-    scores = np.stack(
+    # Each pixel takes the class that fills most of the ground around it.
+    chosen = np.stack(
         [
             _box_blur((labels == index + 1).astype("float32"), BLUR_RADIUS_PX)
             for index in range(len(GROUND_CLASSES))
         ]
-    )
-    chosen = (scores + (noise - 0.5)[None, :, :] * 0.16).argmax(axis=0)
+    ).argmax(axis=0)
     inside = _burn([(layers.patch, 1)], view).astype(bool)
 
     canvas = np.full((view.height, view.width), SLOTS_32["background"], dtype="uint8")
     base = np.array([SLOTS_32[name] for name in GROUND_CLASSES], dtype="uint8")
     canvas[inside] = base[chosen[inside]]
     speckle = np.array([SLOTS_32[SPECKLE[name]] for name in GROUND_CLASSES], dtype="uint8")
+    xs, ys = _global_grid(view)
     chance = 0.05 + hash_field(xs // 9, ys // 9, 12) * 0.17
     marked = inside & (hash_field(xs, ys, 13) < chance)
     canvas[marked] = speckle[chosen[marked]]
@@ -269,10 +270,8 @@ def _paint_cemetery(canvas: np.ndarray, part: gpd.GeoDataFrame, view: Viewport) 
     for axis, shift in ((0, 3), (0, -3), (1, 3), (1, -3)):
         interior &= np.roll(mask, shift, axis=axis)
     canvas[mask & ~interior] = SLOTS_32["tree"]
-    a, b, d, e = PROJECTION.matrix
     for geometry in part.geometry:
-        polygons = geometry.geoms if geometry.geom_type == "MultiPolygon" else [geometry]
-        for polygon in polygons:
+        for polygon in parts(geometry):
             center, u, v, length, width = _ground_axes(polygon)
             usable = polygon.buffer(-3.0)
             shapely.prepare(usable)
@@ -283,8 +282,7 @@ def _paint_cemetery(canvas: np.ndarray, part: gpd.GeoDataFrame, view: Viewport) 
             ys = center[1] + u[1] * grid_u.ravel() + v[1] * grid_v.ravel()
             inside = shapely.contains_xy(usable, xs, ys)
             for x, y in zip(xs[inside], ys[inside], strict=True):
-                col = round(a * x + b * y + view.x_offset)
-                row = round(d * x + e * y + view.y_offset)
+                col, row = _project(view, x, y, 0)
                 if 2 <= col < view.width - 2 and 2 <= row < view.height - 2:
                     canvas[row - 1, col - 1 : col + 2] = SLOTS_32["wall_lit"]
                     canvas[row, col - 1 : col + 2] = SLOTS_32["wall_shade"]
@@ -378,10 +376,15 @@ def _paint_rails(canvas: np.ndarray, rails: gpd.GeoDataFrame, patch, view: Viewp
     canvas[_burn(tracks, view).astype(bool)] = SLOTS_32["background"]
 
 
+def _turn() -> tuple[float, float]:
+    """Return the cosine and sine of the view's rotation."""
+    angle = math.radians(PROJECTION.rotation_deg)
+    return math.cos(angle), math.sin(angle)
+
+
 def _sun_offset(length: float) -> tuple[float, float]:
     """Return the world offset of a shadow of the given ground length."""
-    angle = math.radians(PROJECTION.rotation_deg)
-    cos, sin = math.cos(angle), math.sin(angle)
+    cos, sin = _turn()
     return (
         (SUN_U * cos - SUN_D * sin) * length,
         (SUN_U * sin + SUN_D * cos) * length,
@@ -407,8 +410,7 @@ def _hash(seed: int, text: str, modulo: int) -> int:
 def _normal(p: np.ndarray, q: np.ndarray) -> tuple[float, float]:
     """Return the outward normal of a counterclockwise edge in the view frame (u, depth)."""
     dx, dy = q - p
-    angle = math.radians(PROJECTION.rotation_deg)
-    cos, sin = math.cos(angle), math.sin(angle)
+    cos, sin = _turn()
     return (cos * dy - sin * dx, -sin * dy - cos * dx)
 
 
@@ -446,18 +448,7 @@ def _windows(draw, view, p, q, top, lit, shutters: bool) -> None:
         storey += 1
 
 
-def _paint_walls(
-    draw,
-    view,
-    ring,
-    top,
-    gable_top,
-    shutters,
-    windows,
-    lit_slot=None,
-    shade_slot=None,
-    decorate=None,
-) -> None:
+def _paint_walls(draw, view, ring, top, gable_top, shutters, windows) -> None:
     """Draw camera-facing walls; ring is counterclockwise and closed."""
     edges = []
     for index in range(len(ring) - 1):
@@ -470,9 +461,7 @@ def _paint_walls(
     edges.sort(key=lambda edge: edge[0])
     visible = {edge[1] for edge in edges}
     for _, index, p, q, lit in edges:
-        wall_lit = SLOTS_32["wall_lit"] if lit_slot is None else lit_slot
-        wall_shade = SLOTS_32["wall_shade"] if shade_slot is None else shade_slot
-        fill = wall_lit if lit else wall_shade
+        fill = SLOTS_32["wall_lit" if lit else "wall_shade"]
         quad = [
             _project(view, *p, 0),
             _project(view, *q, 0),
@@ -493,8 +482,6 @@ def _paint_walls(
             )
         if windows:
             _windows(draw, view, p, q, top, lit, shutters)
-        if decorate:
-            decorate(p, q, lit)
         draw.line([_project(view, *p, 0), _project(view, *q, 0)], fill=outline)
     count = len(ring) - 1
     for index in range(count):
@@ -535,7 +522,7 @@ def _paint_pitched(draw, view, polygon, height, slot, shade, windows, ribbed) ->
     ring = [a, b, c, d, a]
     area2 = sum(ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1] for i in range(4))
     if area2 < 0:
-        ring = ring[::-1]
+        ring.reverse()
     closed = np.array(ring)
     # Short edges carry the gables; in the reversed ring they stay at odd positions.
     gables = dict.fromkeys((1, 3), ridge)
@@ -546,8 +533,8 @@ def _paint_pitched(draw, view, polygon, height, slot, shade, windows, ribbed) ->
     faces.sort(key=lambda face: -_depth(*((face[0] + face[1]) / 2)))
     for near0, near1, top1, top0 in faces:
         outward = (near0 + near1) / 2 - (left + right) / 2
-        angle = math.radians(PROJECTION.rotation_deg)
-        facing_left = math.cos(angle) * outward[0] + math.sin(angle) * outward[1] < 0
+        cos, sin = _turn()
+        facing_left = cos * outward[0] + sin * outward[1] < 0
         fill = slot if facing_left else shade
         draw.polygon(
             [
@@ -693,10 +680,9 @@ def _paint_building(image, draw, view, polygon, height, building_id, seed, style
     kind = _classify(area, height, rectangular, building_id, seed)
     index = _hash(seed, building_id, 6)
     if kind in ("house", "shed"):
-        tin = (0, 1, 2, 3, 5)
-        index = tin[index % len(tin)]
+        index = TIN_ROOFS[index % len(TIN_ROOFS)]
     elif _hash(seed, building_id + "c", 100) < CONCRETE_PERCENT:
-        index = 4
+        index = CONCRETE_ROOF
     slot = SLOTS_32[f"roof_{index}"]
     shade = SLOTS_32[f"roof_shade_{index}"]
     if kind == "house" and area < LOW_HOUSE_MAX_M2:
@@ -839,9 +825,6 @@ class Scene:
     spans: list[tuple[LineString, shapely.Polygon]]
     # The derived data to read each frame's buildings from, when they are not held in memory.
     buildings_from: Path | None = None
-
-
-RADIUS_PX = (6, 7, 8, 9, 10, 12)
 
 
 def empty_surfaces() -> gpd.GeoDataFrame:
@@ -1012,12 +995,15 @@ def _visible_landmarks(scene: Scene, view: Viewport) -> list[dict]:
     return landmarks
 
 
+# What an item of the scene is, which picks its painter.
+BUILDING, TREE, LANDMARK, SPAN = range(4)
+
+
 def _add_buildings(items: list, shadows: list, scene: Scene, local: Layers) -> None:
     for row in local.buildings.itertuples():
-        parts = row.geometry.geoms if row.geometry.geom_type == "MultiPolygon" else [row.geometry]
         style = scene.styles.get(row.building_id)
         height = style.get("height_m", row.height_m) if style else row.height_m
-        for part in parts:
+        for part in parts(row.geometry):
             polygon = part
             if style and "scale" in style:
                 factor = style["scale"]
@@ -1026,7 +1012,7 @@ def _add_buildings(items: list, shadows: list, scene: Scene, local: Layers) -> N
             moved = shapely.affinity.translate(polygon, dx, dy)
             shadows.append((shapely.convex_hull(shapely.union(polygon, moved)), 1))
             center = polygon.centroid
-            items.append((-_depth(center.x, center.y), row.building_id, 0, polygon, height))
+            items.append((-_depth(center.x, center.y), row.building_id, BUILDING, polygon, height))
 
 
 def _add_spans(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) -> None:
@@ -1035,7 +1021,7 @@ def _add_spans(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) 
         piece, deck = scene.spans[index]
         shadows.append((shapely.affinity.translate(deck, dx, dy), 1))
         center = piece.interpolate(0.5, normalized=True)
-        items.append((-_depth(center.x, center.y), f"span/{index:07d}", 3, piece, deck))
+        items.append((-_depth(center.x, center.y), f"span/{index:07d}", SPAN, piece, deck))
 
 
 def _add_trees(items: list, shadows: list, scene: Scene, view: Viewport) -> None:
@@ -1052,7 +1038,7 @@ def _add_trees(items: list, shadows: list, scene: Scene, view: Viewport) -> None
         radius_m = RADIUS_PX[index % 6] / PROJECTION.lift * 0.95
         dx, dy = _sun_offset(radius_m * 0.9)
         shadows.append((Point(x + dx, y + dy).buffer(radius_m * 0.9, quad_segs=4), 1))
-        items.append((-_depth(x, y), f"tree/{x:.2f}/{y:.2f}", 1, (x, y), index))
+        items.append((-_depth(x, y), f"tree/{x:.2f}/{y:.2f}", TREE, (x, y), index))
 
 
 def _add_landmarks(items: list, shadows: list, landmarks: list[dict]) -> None:
@@ -1061,7 +1047,7 @@ def _add_landmarks(items: list, shadows: list, landmarks: list[dict]) -> None:
         foot = Point(landmark["x"], landmark["y"]).buffer(4.5)
         shadow = shapely.convex_hull(shapely.union(foot, shapely.affinity.translate(foot, dx, dy)))
         shadows.append((shadow, 1))
-        items.append((-_depth(landmark["x"], landmark["y"]), "landmark", 2, landmark, 0))
+        items.append((-_depth(landmark["x"], landmark["y"]), "landmark", LANDMARK, landmark, 0))
 
 
 def _darken_shadows(canvas: np.ndarray, shadows: list, view: Viewport) -> None:
@@ -1078,14 +1064,14 @@ def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) 
     draw = ImageDraw.Draw(image)
     items.sort(key=lambda item: (item[0], item[1]))
     for _, label, kind, payload, extra in items:
-        if kind == 0:
+        if kind == BUILDING:
             style = scene.styles.get(label)
             _paint_building(image, draw, view, payload, extra, label, scene.seed, style)
-        elif kind == 1:
+        elif kind == TREE:
             sprite, sprite_mask, height = scene.sprites[extra]
             x, y = _project(view, payload[0], payload[1], 0)
             image.paste(sprite, (x - sprite.width // 2, y - height + 1), sprite_mask)
-        elif kind == 3:
+        elif kind == SPAN:
             _paint_span(draw, view, payload, extra)
         else:
             art = payload["sprite"]
@@ -1138,18 +1124,12 @@ def _load_tree_rows(area: Area) -> list[LineString]:
     return list(gpd.GeoSeries(rows, crs=4326).to_crs(METRIC_CRS).values)
 
 
-def _load_surfaces(area: Area) -> gpd.GeoDataFrame:
+def _load_or(area: Area, layer: str, empty) -> gpd.GeoDataFrame:
+    """Read a layer that only some areas have, or make an empty one."""
     path = derived_path(area)
-    if "surfaces" not in pyogrio.list_layers(path)[:, 0]:
-        return empty_surfaces()
-    return gpd.read_file(path, layer="surfaces")
-
-
-def _load_rails(area: Area) -> gpd.GeoDataFrame:
-    path = derived_path(area)
-    if "rails" not in pyogrio.list_layers(path)[:, 0]:
-        return empty_rails()
-    return gpd.read_file(path, layer="rails")
+    if layer not in pyogrio.list_layers(path)[:, 0]:
+        return empty()
+    return gpd.read_file(path, layer=layer)
 
 
 def trees_path(area: Area) -> Path:
@@ -1161,8 +1141,8 @@ def _load_layers_without_buildings(area: Area) -> Layers:
     names = ("patch", "ground", "water", "waterways", "roads")
     frames = {name: gpd.read_file(path, layer=name) for name in names}
     patch = frames.pop("patch").geometry.iloc[0]
-    none = gpd.GeoDataFrame({"building_id": [], "height_m": []}, geometry=[], crs=METRIC_CRS)
-    return Layers(patch=patch, buildings=none, **frames)
+    nothing = gpd.GeoDataFrame({"building_id": [], "height_m": []}, geometry=[], crs=METRIC_CRS)
+    return Layers(patch=patch, buildings=nothing, **frames)
 
 
 def load_scene(
@@ -1175,7 +1155,7 @@ def load_scene(
     That needs the cached trees: placing trees needs every building.
     """
     layers = _load_layers_without_buildings(area) if buildings_by_frame else load_layers(area)
-    surfaces = _load_surfaces(area)
+    surfaces = _load_or(area, "surfaces", empty_surfaces)
     landmarks = load_landmarks()
     trees = np.load(trees_path(area)) if use_cached_trees else None
     scene = _build_area_scene(area, layers, surfaces, landmarks, trees)
@@ -1194,7 +1174,7 @@ def _build_area_scene(area, layers, surfaces, landmarks, trees) -> Scene:
         surfaces,
         trees=trees,
         styles=load_styles(),
-        rails=_load_rails(area),
+        rails=_load_or(area, "rails", empty_rails),
     )
 
 
@@ -1300,11 +1280,8 @@ _worker: dict = {}
 
 def _init_worker(area: Area, canvas: Viewport, view: str, deadline: float | None) -> None:
     use_view(view)
-    _worker["scene"] = load_scene(area, use_cached_trees=True, buildings_by_frame=True)
-    _worker["canvas"] = canvas
-    _worker["area"] = area
-    _worker["view"] = view
-    _worker["deadline"] = deadline
+    scene = load_scene(area, use_cached_trees=True, buildings_by_frame=True)
+    _worker.update(scene=scene, canvas=canvas, area=area, view=view, deadline=deadline)
 
 
 def _render_and_save(cell: tuple[int, int]) -> bool:

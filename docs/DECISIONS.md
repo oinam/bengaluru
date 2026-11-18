@@ -509,3 +509,15 @@ nears grass for red- and green-blind readers (9 to 10) and the Pink Line nears w
 for red-blind ones (5), which is what the dark casing around every line is for.
 
 A fix for the first two is a palette change, so it is Brajeshwar's to ask for.
+
+## 2026-11-18 — The drawing code, tidied without moving a pixel
+
+`detail.py`, `render.py`, and `palettes.py` were read line by line, the last of the
+code to get it. Ten crops of the central area and the test patch, in all four views,
+come out the same pixel for pixel before and after.
+
+What went: wall colors and a decorator that `_paint_walls` took and nothing passed; a
+second copy of the palette packer; two functions that read an optional layer, now one;
+and a noise term in the ground painter that was added to every class alike, so it chose
+nothing. What got a name: the roof slots for tin and concrete, the four kinds of thing
+the scene sorts and paints, the view's turn, and the pieces of a multi-part geometry.

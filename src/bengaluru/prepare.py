@@ -479,7 +479,7 @@ def prepare(area: Area) -> None:
         "ground": ground_polygons(area, patch),
         "water": water.assign(geometry=water.geometry.intersection(patch)),
         "waterways": rivers.assign(geometry=rivers.geometry.intersection(patch)),
-        "roads": roads(features).pipe(lambda r: r.assign(geometry=r.geometry.intersection(patch))),
+        "roads": road_lines.assign(geometry=road_lines.geometry.intersection(patch)),
         "pois": points_of_interest(features).pipe(lambda p: p[p.geometry.within(patch)]),
         "buildings": buildings,
     }

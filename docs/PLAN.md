@@ -2,17 +2,17 @@
 
 ## Status
 
-*17 November 2026. Brajeshwar said go: build the whole city. It is built. The central
-area finished at 08:59 and the BBMP area at 11:42, four views each, and the viewer opens
-on BBMP (`mise run dev`, http://localhost:8655). Courtyards were then opened in the
-drawing code, which made every view stale: central was drawn again by 12:19, and BBMP
-got two of its four views done before the day's window closed at 13:40. The night's work
-at 23:00 drew the other two and finished at 00:35 on the 18th, so both areas are whole
-and current. From here the night builds a view again only when the data or the drawing
-code changes. The look is still Manipur's, unchanged; "What looks wrong" below is the
-list to choose from, and `20261117-091959_look-options.png` in `out/central/` shows four
-candidate answers to its first items. Phase 0's frames of the test patch are in
-`out/vidhana-soudha/`.*
+*18 November 2026. The whole city is built and online, four views, and the viewer opens
+on BBMP (`mise run dev`, http://localhost:8655). The build that is live is the night of
+the 17th's: Manipur's look, courtyards open, the north edge at 13.14 N. Four things
+changed on the 18th and wait for the night to draw them, all in one build: the north
+edge moved to 13.23 N to take in the airport; the look became Bengaluru's, flat concrete
+roofs and lawns for paddy (`20261118-131533_look-c-before-after.png` in `out/central/`);
+the metro's lines and stations are prepared for the viewer to draw in their colors
+(`20261118-132647_metro-layer-city.jpg` in `out/bbmp/`); and the drawing code was
+tidied without moving a pixel. The night builds `bbmp` first, then `central`. "What
+looks wrong" below is the list still to choose from. Phase 0's frames of the test patch
+are in `out/vidhana-soudha/`.*
 
 ### Online
 
@@ -37,6 +37,11 @@ it 34.7 × 44.2 km, about 1,535 km², 29% more, most of it open country. The nig
 a five-hour window; what does not fit carries on the next night, and the live map stays
 as it is until all four views are done and uploaded. The numbers below are the first
 build's and are due an update once the taller one is built, as are the README's.
+
+The same build carries the new look and writes `metro.json`, the index the viewer's
+metro layer reads. The viewer code for that layer is committed and reaches the site
+with the next push; until then, and on a map without the index, the site shows no
+metro layer and no switch for it.
 
 ### Next: an AI-painted layer, as a trial
 

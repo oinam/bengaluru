@@ -29,6 +29,7 @@ from bengaluru.detail import (
     trees_path,
 )
 from bengaluru.prepare import METRIC_CRS, derived_path
+from bengaluru.render import parts
 
 TILE_PX = 512
 AREA_KINDS = {"city", "suburb", "town"}
@@ -110,7 +111,7 @@ def _polylines(geometry, tolerance_m: float, x_offset: float, y_offset: float) -
     """Return a line, or each part of a broken one, simplified, as canvas points."""
     return [
         [list(_to_canvas(x, y, x_offset, y_offset)) for x, y in part.simplify(tolerance_m).coords]
-        for part in getattr(geometry, "geoms", [geometry])
+        for part in parts(geometry)
     ]
 
 

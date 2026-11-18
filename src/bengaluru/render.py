@@ -121,6 +121,11 @@ class Layers:
     buildings: gpd.GeoDataFrame
 
 
+def parts(geometry) -> list:
+    """Return the pieces of a multi-part geometry, or the geometry itself as its only piece."""
+    return list(getattr(geometry, "geoms", [geometry]))
+
+
 def load_layers(area: Area) -> Layers:
     path = derived_path(area)
     frames = {
@@ -244,19 +249,16 @@ def render_slots(
     image = Image.fromarray(canvas, mode="L")
     draw = ImageDraw.Draw(image)
 
-    parts = []
+    blocks = []
     for row in layers.buildings.itertuples():
-        polygons = (
-            row.geometry.geoms if row.geometry.geom_type == "MultiPolygon" else [row.geometry]
-        )
-        for polygon in polygons:
+        for polygon in parts(row.geometry):
             center = polygon.centroid
-            parts.append(
+            blocks.append(
                 (projection.depth(center.x, center.y), row.building_id, polygon, row.height_m)
             )
-    parts.sort(key=lambda part: (-part[0], part[1]))
+    blocks.sort(key=lambda block: (-block[0], block[1]))
 
-    for _, building_id, polygon, height in parts:
+    for _, building_id, polygon, height in blocks:
         _paint_building(draw, polygon, height, _roof_slot(building_id, seed), projection, view)
     return np.asarray(image, dtype="uint8").copy()
 
@@ -291,10 +293,6 @@ def render(area: Area) -> None:
             print(f"{output}: {view.width} x {view.height}, {elapsed:.1f}s")
 
 
-def _swatch_font() -> ImageFont.ImageFont:
-    return ImageFont.load_default(size=22)
-
-
 def swatches(area: Area) -> None:
     """Apply every candidate palette to one crop, per projection, side by side."""
     layers = load_layers(area)
@@ -309,7 +307,7 @@ def swatches(area: Area) -> None:
     row_height = title + panel + strip + gap
     sheet = Image.new("RGB", (width, gap + row_height * len(PROJECTIONS)), "#ffffff")
     draw = ImageDraw.Draw(sheet)
-    font = _swatch_font()
+    font = ImageFont.load_default(size=22)
 
     for row, projection in enumerate(PROJECTIONS):
         view = centered_viewport(projection, x, y, panel, panel)
