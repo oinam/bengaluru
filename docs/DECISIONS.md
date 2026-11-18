@@ -397,3 +397,10 @@ the code be formatted and linted and its security looked after.
 
 Not done, and his to ask for: a rule on GitHub that blocks force-pushes to `main`, and
 a `SECURITY.md` saying where to report a problem.
+
+## 2026-11-18 — English only, for now
+
+Brajeshwar's call, after the notes on Isometric Bengaluru in `docs/RESEARCH.md` proposed
+Kannada names in search and labels: no Kannada, the map stays in English for now. The
+data would allow it later (`name:kn` is on most named places, stations, and roads in
+OpenStreetMap), so this is a choice about the map, not a limit of its sources.

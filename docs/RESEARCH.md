@@ -217,7 +217,8 @@ What is worth taking, most useful first:
    Chennai does the same in Tamil. Our labels and search are English only. In the
    central area's OSM data, 74% of named places, 94% of stations, and 85% of named roads
    already have `name:kn`, so search and labels in both scripts need `prepare` to keep
-   that tag and the viewer to offer it.
+   that tag and the viewer to offer it. Not taken up: on 2026-11-18 Brajeshwar chose
+   English only for now.
 4. **A palette with a local reason.** Each piece takes its colors from something of the
    city: kumkum, Mysore silk, tabebuia blossom, the metro's line colors. Our look is
    still Manipur's. Bengaluru's flowering trees (pink tabebuia, purple jacaranda, red
