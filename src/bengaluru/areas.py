@@ -40,12 +40,13 @@ AREAS = {
         osm_extract="asia/india/southern-zone",
         height_res_m=2.0,
     ),
-    # The BBMP area, the Phase 3 map.
+    # The BBMP area, the Phase 3 map, carried north past the city's edge to take in
+    # Kempegowda International Airport, which OpenStreetMap bounds at 13.2113 N.
     "bbmp": Area(
         "bbmp",
         12.83,
         77.46,
-        13.14,
+        13.23,
         77.78,
         osm_extract="asia/india/southern-zone",
         height_res_m=2.0,

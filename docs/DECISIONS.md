@@ -343,3 +343,25 @@ yet. Moving in needs a token for that bucket, a prefix in each map's upload and 
 base, and a session in the Manipur repository, and it is better done once the domain
 question above is settled, since the tiles' domain would move with it. The cost of
 sharing is that one token then writes every map's tiles.
+
+## 2026-11-18 — The airport, and bounds that move
+
+Brajeshwar asked for Kempegowda International Airport on the map. It lies north of the
+BBMP box: OpenStreetMap bounds the airport at 13.1838–13.2113 N, 77.6759–77.7366 E. A
+map here is one rectangle, so the `bbmp` area's north edge moved from 13.14 to 13.23 N
+across its whole width, which leaves about 2 km of ground beyond the airport's fence and
+stops short of Devanahalli town. The area keeps its name, since its folders, its
+pyramids' file names, and the viewer all carry it. Yelahanka Air Force Station, which
+the old edge cut through, is now whole. The airfield is drawn as HAL's already is, from
+OSM's runways, taxiways, and aprons, and the terminals are plain buildings from their
+footprints. Live aircraft were looked at and set aside by him for now; adsb.lol heard
+ten aircraft within 75 km of the airport on one query that morning, five of them on the
+ground there, against none at Imphal.
+
+Moving an edge showed that the night never fetched or prepared an area twice: it looked
+only for `SOURCES.txt` and the stats file. Now `fetch` writes the bounds it fetched to
+`data/raw/<area>/bounds.json`, last, and the night fetches again when they differ from
+the area's, and prepares again when the stats are older than the fetch. The build
+already drew every view again when the prepared data changed. The three areas on disk
+got their `bounds.json` by hand that morning, with the bounds they were fetched for.
+The taller area needs a second Open Buildings cell, `3bb1`, 274 MB.

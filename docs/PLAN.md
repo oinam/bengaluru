@@ -28,6 +28,16 @@ Brajeshwar's to settle now that it is public: the license shown for the rendered
 the footer's wording, and the Go to list, all still Manipur's placeholders. He may move
 the maps to a domain of their own; `docs/DECISIONS.md` lists what that touches.
 
+### Next: the airport
+
+On 2026-11-18 Brajeshwar asked for Kempegowda International Airport on the map, without
+aircraft for now. The `bbmp` area's north edge moved from 13.14 to 13.23 N, which makes
+it 34.7 × 44.2 km, about 1,535 km², 29% more, most of it open country. The night of the
+18th fetches, prepares, and draws all of it again, about four hours by estimate against
+a five-hour window; what does not fit carries on the next night, and the live map stays
+as it is until all four views are done and uploaded. The numbers below are the first
+build's and are due an update once the taller one is built, as are the README's.
+
 ### BBMP numbers, 2026-11-17
 
 The `bbmp` area: 12.83–13.14 N, 77.46–77.78 E, 34.7 × 34.3 km, about 1,190 km².
@@ -222,7 +232,8 @@ Bounding boxes, to be confirmed in Phase 0:
   77.580–77.605 E (about 2.7 × 2.8 km), widened in Phase 0 so a north-up frame is full
 - Central Bengaluru, inside the Outer Ring Road (`central`): about 12.90–13.05 N,
   77.52–77.68 E
-- BBMP area (`bbmp`): about 12.83–13.14 N, 77.46–77.78 E
+- BBMP area (`bbmp`): about 12.83–13.14 N, 77.46–77.78 E; carried north to 13.23 N on
+  2026-11-18 to take in the airport
 - Local metric CRS: UTM 43N, EPSG:32643
 
 ## Architecture
