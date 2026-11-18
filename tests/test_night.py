@@ -1,9 +1,15 @@
 import datetime as dt
+import json
+import os
+import time
 
 import pytest
 
 from bengaluru import night
+from bengaluru.areas import Area
+from bengaluru.fetch import bounds_path, raw_dir
 from bengaluru.night import NIGHT_WINDOW, closing_time, next_opening, schedule_wake
+from bengaluru.prepare import stats_path
 
 
 def at(day: int, clock: str) -> dt.datetime:
@@ -79,3 +85,40 @@ def test_a_wake_is_set_once_for_the_opening(tmp_path, monkeypatch):
     monkeypatch.setattr(night.subprocess, "run", already)
     schedule_wake(at(16, "23:00"))
     assert all(command[0] != "sudo" for command in already.commands)
+
+
+def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    before = Area("city", 12.0, 77.0, 13.0, 78.0)
+    after = Area("city", 12.0, 77.0, 13.5, 78.0)
+    done: list[str] = []
+    clock = iter(range(1, 100))
+
+    def stamp(path):
+        """Write a file a second later than the last, as the real steps take time."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("")
+        tick = next(clock)
+        os.utime(path, (tick, tick))
+
+    def fetch(area):
+        done.append("fetch")
+        stamp(raw_dir(area) / "SOURCES.txt")
+        bounds_path(area).write_text(json.dumps(area.bounds))
+
+    def prepare(area):
+        done.append("prepare")
+        stamp(stats_path(area))
+
+    monkeypatch.setattr(night, "fetch", fetch)
+    monkeypatch.setattr(night, "prepare", prepare)
+    monkeypatch.setattr(night, "build", lambda area, deadline: done.append("build") or True)
+    later = time.time() + 60
+
+    assert night._work(before, later)
+    assert night._work(before, later)
+    assert done == ["fetch", "prepare", "build", "build"]
+
+    del done[:]
+    assert night._work(after, later)
+    assert done == ["fetch", "prepare", "build"]

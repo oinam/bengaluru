@@ -65,6 +65,18 @@ def raw_dir(area: Area) -> Path:
     return Path("data/raw") / area.name
 
 
+def bounds_path(area: Area) -> Path:
+    return raw_dir(area) / "bounds.json"
+
+
+def fetched(area: Area) -> bool:
+    """Return whether the downloads on disk are of the area as it is bounded now."""
+    record = bounds_path(area)
+    if not (record.exists() and (raw_dir(area) / "SOURCES.txt").exists()):
+        return False
+    return json.loads(record.read_text()) == list(area.bounds)
+
+
 def overpass_query(area: Area) -> str:
     bbox = f"{area.south},{area.west},{area.north},{area.east}"
     # Relations are limited to multipolygons: named routes span the continent.
@@ -353,4 +365,6 @@ def fetch(area: Area) -> None:
         sources.write(f"{today}\tESA WorldCover 2021 v200\t{cover_url}\t{cover_path.name}\n")
         for url in height_urls:
             sources.write(f"{today}\tOpen Buildings 2.5D Temporal\t{url}\t{heights_path.name}\n")
+    # Last, so a fetch that stopped partway is not taken for a whole one.
+    bounds_path(area).write_text(json.dumps(area.bounds) + "\n")
     print(f"Recorded in {directory / 'SOURCES.txt'}. Update docs/DATA.md if a source changed.")

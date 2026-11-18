@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from bengaluru.areas import Area
-from bengaluru.fetch import fetch, raw_dir
+from bengaluru.fetch import fetch, fetched, raw_dir
 from bengaluru.prepare import prepare, stats_path
 from bengaluru.tile import build
 
@@ -88,14 +88,22 @@ def night(areas: list[Area], window: str = NIGHT_WINDOW) -> None:
     print(f"night: everything is built, at {dt.datetime.now():%H:%M}")
 
 
+def _prepared(area: Area) -> bool:
+    """Return whether the derived data was made from the downloads now on disk."""
+    stats, sources = stats_path(area), raw_dir(area) / "SOURCES.txt"
+    return stats.exists() and stats.stat().st_mtime >= sources.stat().st_mtime
+
+
 def _work(area: Area, deadline: float) -> bool:
     """Carry one area as far as the deadline allows and return whether it is built."""
+    # An area whose bounds have moved is fetched again, and what is fetched again is
+    # prepared again; the build then sees new data and draws every view again.
     steps = (
-        ("fetch", raw_dir(area) / "SOURCES.txt", fetch),
-        ("prepare", stats_path(area), prepare),
+        ("fetch", fetched, fetch),
+        ("prepare", _prepared, prepare),
     )
-    for name, product, run in steps:
-        if product.exists():
+    for name, done, run in steps:
+        if done(area):
             continue
         if time.time() >= deadline:
             print(
