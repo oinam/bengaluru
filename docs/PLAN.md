@@ -2,18 +2,14 @@
 
 ## Status
 
-*18 November 2026. The whole city is built and online, four views, and the viewer opens
+*19 November 2026. The whole city is built and online, four views, and the viewer opens
 on BBMP (`mise run dev`, http://localhost:8655). The build that is live is the night of
-the 17th's: Manipur's look, courtyards open, the north edge at 13.14 N. Five things
-changed on the 18th and wait for the night to draw them, all in one build: the north
-edge moved to 13.23 N to take in the airport; the look became Bengaluru's, flat concrete
-roofs and lawns for paddy (`20261118-131533_look-c-before-after.png` in `out/central/`);
-the metro's lines and stations are prepared for the viewer to draw in their colors
-(`20261118-132647_metro-layer-city.jpg` in `out/bbmp/`); the drawing code was tidied
-without moving a pixel; and about one tree in sixteen flowers, in groves of pink, purple,
-and red (`20261118-151452_crop-cubbon-park-in-bloom-315.png` in `out/vidhana-soudha/`). The night builds `bbmp` first, then `central`. "What
-looks wrong" below is the list still to choose from. Phase 0's frames of the test patch
-are in `out/vidhana-soudha/`.*
+the 18th's, drawn from 22:08 at Brajeshwar's word and online at 02:13: the north edge at
+13.23 N with the airport in it; Bengaluru's look, flat concrete roofs and lawns for
+paddy; about one tree in sixteen in flower, in groves of pink, purple, and red; and the
+metro's lines and stations as a layer in the viewer, in their colors. `central` was
+drawn again the same night with the same look. "What looks wrong" below is the list
+still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
 ### Online
 
@@ -21,29 +17,27 @@ Live at `bengaluru.oinam.com` since 2026-11-17. It went up with the first BBMP b
 the one with lids on the courtyards, and changed over to the courtyard build at 00:45 on
 the 18th, once the night had finished it; `20261118-010916_crop-chinnaswamy-315.png` in
 `out/bbmp/` is the stadium as it now shows. Tiles are on R2 in `bengaluru-tiles`; a push
-to `main` deploys the viewer. The first build was then removed from R2, which leaves the
-bucket at 4.1 GB in 53,114 files, and the account at about 8 of R2's free 10 GB with the
-Manipur map's 3.9.
+to `main` deploys the viewer. The first build was then removed from R2.
+
+It changed over again at 02:13 on the 19th, to the build with the airport, the new
+look, the flowering trees, and `metro.json`; the viewer that draws the metro had gone
+up with a push at 21:37 on the 18th and showed no layer until then. The courtyard build
+was removed from R2 after it, which leaves the bucket at 4.5 GB in 66,761 files, and the
+account at about 8.4 of R2's free 10 GB with the Manipur map's 3.9.
 
 On 2026-11-18 Brajeshwar kept, for now, the three things that went public as
 placeholders: the "Rendered map CC BY-SA 4.0" line in Credits, the 16 places in the Go
 to list, and the metro viaduct as a cream deck on piers. He may move the maps to a
 domain of their own; `docs/DECISIONS.md` lists what that touches.
 
-### Next: the airport
+### Done: the airport
 
 On 2026-11-18 Brajeshwar asked for Kempegowda International Airport on the map, without
 aircraft for now. The `bbmp` area's north edge moved from 13.14 to 13.23 N, which makes
 it 34.7 × 44.2 km, about 1,535 km², 29% more, most of it open country. The night of the
-18th fetches, prepares, and draws all of it again, about four hours by estimate against
-a five-hour window; what does not fit carries on the next night, and the live map stays
-as it is until all four views are done and uploaded. The numbers below are the first
-build's and are due an update once the taller one is built, as are the README's.
-
-The same build carries the new look and writes `metro.json`, the index the viewer's
-metro layer reads. The viewer code for that layer is committed and reaches the site
-with the next push; until then, and on a map without the index, the site shows no
-metro layer and no switch for it.
+18th fetched, prepared, and drew all of it in three and a half hours, and it has been
+live since 02:13 on the 19th. A Go to button for the airport is not added; the list is
+Brajeshwar's.
 
 ### Parked: an AI-painted layer
 
@@ -77,36 +71,37 @@ on images of every kind, though nothing photographic of Bengaluru goes in (rule 
 it invents detail the data does not hold, so the About page has to say which layer is
 which. The site's "zero cost" line stops being true the day the first dollar is spent.
 
-### BBMP numbers, 2026-11-17
+### BBMP numbers, 2026-11-19
 
-The `bbmp` area: 12.83–13.14 N, 77.46–77.78 E, 34.7 × 34.3 km, about 1,190 km².
+The `bbmp` area: 12.83–13.23 N, 77.46–77.78 E, 34.7 × 44.2 km, about 1,535 km².
 
 | | |
 |---|---|
-| OSM buildings | 799,662; 91 underground ones left out |
-| Open Buildings v3 footprints in the box | 1,906,910 |
-| of those, under 0.70 confidence | 295,547 dropped |
-| duplicates of an OSM building | 526,069 dropped |
-| on water, a major road, or a viaduct | 1,216, 7,790, and 79 dropped |
-| Open Buildings kept | 1,076,209 |
-| **Buildings drawn** | **1,875,702**, 43% from OSM and 57% from Open Buildings |
-| Heights from the 2.5D raster / OSM tags / a default | 1,813,358 / 13,998 / 48,346 |
-| Height, median / 95th percentile / tallest | 6.0 m / 12.2 m / 170 m, the cap |
-| Railway and metro track in the open | 715 km, 248 km of it on viaducts (each track counted) |
-| Trees placed | 3,501,976 |
-| Named places in the search index | 77,121 |
-| Canvas, each view | 71,680 × 36,864 px (69,632 wide for the two side views), 630 and 612 frames |
+| OSM buildings | 807,698; 93 underground ones left out |
+| Open Buildings v3 footprints in the box | 2,014,120, from two of its cells |
+| of those, under 0.70 confidence | 311,581 dropped |
+| duplicates of an OSM building | 533,409 dropped |
+| on water, a major road, or a viaduct | 1,353, 8,606, and 85 dropped |
+| Open Buildings kept | 1,159,086 |
+| **Buildings drawn** | **1,966,617**, 41% from OSM and 59% from Open Buildings |
+| Heights from the 2.5D raster / OSM tags / a default | 1,897,543 / 14,853 / 54,221 |
+| Height, median / 95th percentile / tallest | 5.9 m / 12.1 m / 170 m, the cap |
+| Railway and metro track in the open | 768 km, 262 km of it on viaducts (each track counted) |
+| Trees placed | 4,191,157 |
+| Metro in the viewer's layer | 255 pieces of track and 126 stations, 85 of them open |
+| Named places in the search index | 78,893 |
+| Canvas, each view | 71,680 × 45,056 px, and 90,112 × 36,864 for the two side views; 770 and 792 frames |
 
 | Step | Time on this Mac |
 |---|---|
-| `fetch` | 16 min, the Geofabrik extract already on disk |
-| `prepare` | 13 min, then 4 min placing the trees |
-| `build`, four views rendered and tiled | 2 h 26 min: about 33 min of frames a view with six workers, 4 min tiling |
-| Tiles on disk | 3.9 GB in 53,119 files |
+| `fetch` | 18 min, the Geofabrik extract already on disk and one Open Buildings cell new |
+| `prepare` | 15 min, then 5 min placing the trees |
+| `build`, four views rendered and tiled | 2 h 52 min |
+| Upload to R2, then removing the build it replaced | 34 min, then 26 min |
+| Tiles on disk | 4.3 GB in 66,766 files |
 
-No process went over 5.1 GB, and the Mac kept 37% to 57% of its memory free through the
-build. `20261117-114341_four-views.png` in `out/bbmp/` shows the four views side by side,
-and three crops beside it show Whitefield, Electronic City, and Yelahanka.
+The first build's numbers, of the area before the airport, are in this file's history
+at 2026-11-17. `central` was drawn again after it in 22 minutes.
 
 ### Central numbers, 2026-11-17
 

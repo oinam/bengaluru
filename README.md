@@ -4,9 +4,10 @@ A zoomable, searchable isometric pixel-art map of Bengaluru, drawn by AI code fr
 data: OpenStreetMap, Google Open Buildings, and ESA WorldCover. No photographs, satellite
 imagery, or image models go into the picture.
 
-The whole BBMP area, about 1,200 km² and 1.9 million buildings, is built in four views
-and is online at [bengaluru.oinam.com](https://bengaluru.oinam.com). The plan and
-where it stands are in [docs/PLAN.md](docs/PLAN.md).
+The whole BBMP area and the airport north of it, about 1,500 km² and 2 million
+buildings, is built in four views and is online at
+[bengaluru.oinam.com](https://bengaluru.oinam.com). The plan and where it stands are in
+[docs/PLAN.md](docs/PLAN.md).
 
 It follows similar idea and methodologies with [Manipur map](https://manipur.oinam.com/).
 
