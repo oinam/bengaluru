@@ -85,7 +85,7 @@ uv run bengaluru render  --area vidhana-soudha  # writes flat frame and full ren
 uv run bengaluru swatches --area vidhana-soudha # writes the candidate palette sheet to out/<area>/
 uv run bengaluru detail  --area vidhana-soudha  # writes one near-final 2048 px frame per detail view to out/<area>/
 uv run bengaluru frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
-uv run bengaluru build   --area vidhana-soudha  # renders and tiles the four views one at a time; resumes at the first missing frame
+uv run bengaluru build   --area vidhana-soudha  # renders and tiles the four views one at a time, each as the map and its two layers (trees in flower, night lights); resumes at the first missing frame
 uv run bengaluru tile    --area vidhana-soudha  # builds each view's Deep Zoom pyramid and the search index from frames on disk
 mise run metro [area]                           # reads the metro again from the downloads on disk and rewrites a built map's metro.json; draws nothing, takes seconds
 uv run python tools/four_views.py [area]        # lays the four built views side by side in one PNG in out/<area>/

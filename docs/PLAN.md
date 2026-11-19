@@ -9,8 +9,13 @@ the 18th's, drawn from 22:08 at Brajeshwar's word and online at 02:13: the north
 paddy; about one tree in sixteen in flower, in groves of pink, purple, and red; and the
 metro's lines and stations as a layer in the viewer, in their colors. `central` was
 drawn again the same night with the same look. On the 19th the metro layer learned to
-tell open, being built, and proposed apart, and gained the proposed lines; that is on
-this Mac and waits for a push and an upload of `metro.json`. "What looks wrong" below is
+tell open, being built, and proposed apart, and gained the proposed lines; the viewer
+went up with a push that morning, and the proposed lines wait for an upload of
+`metro.json`. The same day the map learned the city's hours and seasons: it darkens by
+Bengaluru's clock and lights its windows and street lamps, and its trees flower in their
+months, each with a switch in Settings. That is built on the test patch and committed;
+`bbmp` is drawn again by the night of the 19th, and then waits for an upload and a push.
+"What looks wrong" below is
 the list still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
 ### Online

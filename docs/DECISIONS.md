@@ -631,3 +631,61 @@ Everything that was in `bbmp`'s index is in the new one unchanged; only the prop
 lines and stations are added. Seen on the dev server in two views:
 `out/bbmp/20261119-062213_metro-open-built-proposed-city.jpg` and
 `…_metro-open-built-proposed-hebbal.jpg`.
+
+## 2026-11-19 — The city's hours and seasons: night, and trees that flower in their months
+
+Brajeshwar asked what live data the map could carry, and chose the two layers that need
+none: day and night, with a switch to hold either, and trees that flower by the season.
+Both are told from the clock alone. He called them harmless if not accurate and fun to
+see, which is the bar they are built to.
+
+- **The map is now three pictures per view.** The base is the city by day with every
+  tree green. Over it lie `bloom`, clear but for the blossom on the flowering trees,
+  and `lights`, black but for the windows and street lamps that shine at night. All
+  three come from one drawing: the renderer draws a frame once, in palette slots, and
+  writes it three times with three palettes (`save_frame`). So the blossom and the
+  lights sit to the pixel on what they belong to, behind whatever stands in front.
+- **Why layers, and not a map per season.** A season drawn in would cost a night's
+  drawing each time the month changed, and could not be switched in the viewer. A
+  pixel filter in the viewer cannot tell blossom from a tin roof once tiles are shrunk.
+  Layers cost one drawing, and the viewer picks.
+- **Trees in flower.** One `bloom` picture holds all three trees. The manifest gives
+  each tree's two colors and its months; the viewer clears from each tile, as it
+  arrives, the pixels nearest the colors of a tree not in flower. The months, to the
+  nearest whole one, from what the city's papers and tree-watchers report: tabebuia
+  January to March, jacaranda March and April, gulmohar April to June. They are in
+  `palettes.py` beside the colors. From July to December nothing on the map flowers,
+  which is so for these three trees and is a plainer map than the one of the 18th,
+  which showed all three at once. Settings has "Trees in flower", with this month or
+  any other.
+- **Night.** The viewer works out the sun's height over Vidhana Soudha from the clock
+  (the Astronomical Almanac's short formulas, checked against the day's sunrise and
+  sunset). Above 3 degrees is day and below minus 6 is night, with dusk and dawn
+  easing between. Night is a blue the map is multiplied by, so the drawing is kept and
+  cooled; the lights are added over it. It is the city's time, wherever the map is
+  read. Settings has "Light": by Bengaluru's clock, day, or night.
+- **What shines.** Of a hundred windows, 42, each chosen by where it is, so the same
+  ones every build. A lamp every 30 m on the footpath of each major road, on alternate
+  sides. By day both are the color of what they stand on and cannot be seen: the base
+  picture is the same map as before, less the blossom. Landmarks drawn as sprites have
+  no lit windows yet.
+- **Lights from afar.** The tiler averages pixels as it shrinks a picture, which
+  fades a two-pixel window to nothing. The lights are kept on black, with no clear
+  part, because only then does the tiler keep the brightest pixel instead. Far out
+  that runs the windows together, so the viewer dims the lights as the map shrinks.
+  The second picture is drawn by a second viewer that follows the first, because the
+  lights must lie over the night's shade and the shade is the page's, not the map's.
+- **Size.** A layer's tiles are 1,024 px, a quarter as many files as the map's, and
+  mostly empty: on the test patch the two add 11% to the bytes. Uploading and pruning
+  know a view's three pyramids.
+- **Old and new together.** The viewer reads a manifest without layers as before:
+  no "Trees in flower" switch, and a night with shade and no lights. A manifest with
+  layers under the viewer online today would show the city green and never dark. So
+  the tiles and the viewer go up together, tiles first, as after any drawing.
+- **His to change:** the blue of the night, the colors of window and lamp
+  (`LIGHTS`), how many windows are lit, the months, and whether the map follows the
+  clock unless told, or stays in daylight unless asked.
+
+Built and seen on the test patch: `out/vidhana-soudha/20261119-081605_night-vidhana-soudha-april.jpg`,
+`…_night-cubbon-park-april.jpg`, and `…_day-cubbon-park-march.jpg`. `bbmp` and
+`central` are drawn again by the night, since the drawing code changed.
