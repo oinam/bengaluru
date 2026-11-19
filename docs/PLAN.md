@@ -8,8 +8,10 @@ the 18th's, drawn from 22:08 at Brajeshwar's word and online at 02:13: the north
 13.23 N with the airport in it; Bengaluru's look, flat concrete roofs and lawns for
 paddy; about one tree in sixteen in flower, in groves of pink, purple, and red; and the
 metro's lines and stations as a layer in the viewer, in their colors. `central` was
-drawn again the same night with the same look. "What looks wrong" below is the list
-still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
+drawn again the same night with the same look. On the 19th the metro layer learned to
+tell open, being built, and proposed apart, and gained the proposed lines; that is on
+this Mac and waits for a push and an upload of `metro.json`. "What looks wrong" below is
+the list still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
 ### Online
 
@@ -88,7 +90,7 @@ The `bbmp` area: 12.83–13.23 N, 77.46–77.78 E, 34.7 × 44.2 km, about 1,535 
 | Height, median / 95th percentile / tallest | 5.9 m / 12.1 m / 170 m, the cap |
 | Railway and metro track in the open | 768 km, 262 km of it on viaducts (each track counted) |
 | Trees placed | 4,191,157 |
-| Metro in the viewer's layer | 255 pieces of track and 126 stations, 85 of them open |
+| Metro in the viewer's layer | 255 pieces of track and 126 stations, 85 of them open. Read again on the 19th with what is proposed: 273 pieces and 179 stations, of which 85 are open, 41 being built, and 53 proposed |
 | Named places in the search index | 78,893 |
 | Canvas, each view | 71,680 × 45,056 px, and 90,112 × 36,864 for the two side views; 770 and 792 frames |
 

@@ -580,3 +580,54 @@ launchd still starts its own run at 23:00, and two nights drawing the same area 
 write over each other's frames. So a night now takes a lock, `data/derived/night.lock`,
 before any work, and one that finds it held does nothing. It still sets the next
 night's wake first, which only the real window does, so the chain of wakes holds.
+
+## 2026-11-19 — The metro: open, being built, and proposed
+
+Brajeshwar asked that the map say which metro lines are working and which are proposed,
+with dotted lines for the proposed ones. Until now it drew two states, and the second
+did not always read: a line being built was dashes of its color on the dark casing, and
+the Blue Line's blue on that casing looked whole.
+
+- **Three states, three strokes.** A line in service is solid. A line being built is its
+  color broken by strokes of paper. A proposed line is dots, with the map between them.
+  A station is a white dot where it is open, a dark one where it is being built, and a
+  smaller dark one where it is proposed.
+- **Paper, and the lesser part.** The paper strokes go on last and cover a third of the
+  line. Twin tracks draw their strokes out of step, and where they lie on each other
+  the last color drawn wins: with color last the two made a whole line, with paper last
+  both still show.
+- **Underground.** Solid and broken lines stay faint in a tunnel. A proposed line does
+  not: dots at half strength were lost on the map.
+- **What is proposed** comes from OpenStreetMap, like the rest. No route relation names
+  a line only planned, so its track is every way tagged `railway=proposed` on the
+  network "Namma Metro" that is not a station's outline, and its stations are the nodes
+  tagged `proposed:station=subway`. In `bbmp` that is 81 km and 53 stations: the Orange
+  Line along the western ring road (32 km), the Hosahalli-Kadabagere line (11 km), the
+  Red Line from Sarjapur to Hebbal (36 km, 14 of them under the center), and a short
+  stretch past Whitefield. The suburban railway's proposed lines are in the same data
+  and are left out: they are not the metro.
+- **Colors are the ways' own.** The Orange and Red lines carry one. The
+  Hosahalli-Kadabagere line and the stretch past Whitefield carry none and are drawn in
+  the cream the viewer keeps for a line without a color. None is made up here.
+- **A plan is a plan.** The About page says a proposed line's route and stations can
+  change. A mapper's drawing of a plan is less sure than surveyed track.
+- **Said in the viewer.** Settings shows the four strokes under "Metro lines": open,
+  being built, proposed, underground. Help says it in a sentence.
+- **The metro has a file of its own**, `data/derived/<area>_metro.gpkg`, written by
+  `prepare` and by a new stage, `metro` (`mise run metro [area]`), which reads the
+  metro alone from the downloads on disk and rewrites a built map's `metro.json`. The
+  layers were in the scene's file, and a build is stale when that file changes, so a
+  new reading of the metro would have cost a night's drawing of pixels that do not
+  move. On `bbmp` the stage takes ten seconds. The `metro` and `stations` layers left
+  in scene files made before this are not read.
+- **In the index** a line and a station carry `proposed` beside `open`; neither means
+  being built. The viewer online now would draw a proposed line as one being built, so
+  the viewer goes up first and `metro.json` after it. The new viewer reads the old
+  index as before.
+- **Not refreshed:** `central` and the test patch. Their downloads are from before
+  `fetch` kept route relations, so they have no metro to tell apart.
+
+Everything that was in `bbmp`'s index is in the new one unchanged; only the proposed
+lines and stations are added. Seen on the dev server in two views:
+`out/bbmp/20261119-062213_metro-open-built-proposed-city.jpg` and
+`…_metro-open-built-proposed-hebbal.jpg`.
