@@ -3,14 +3,18 @@ import OpenSeadragon from "openseadragon";
 import { TILE_BASE } from "./tiles";
 
 // The metro, drawn over the map: each track in its line's color, dashed where the line
-// is being built and faint where it runs underground, with a dot and a name at each
-// station. Open track sits on the viaduct the map already draws.
+// is being built, dotted where it is only proposed, and faint where it runs underground,
+// with a dot and a name at each station. Open track sits on the viaduct the map already
+// draws.
 
 type Level = "tunnel" | "ground" | "raised";
 
+// What is neither open nor proposed is being built. An index written before the map
+// showed proposed lines has none.
 interface Line {
   colour: string | null;
   open: boolean;
+  proposed?: boolean;
   level: Level;
   points: [number, number][];
 }
@@ -20,6 +24,7 @@ interface Station {
   x: number;
   y: number;
   open: boolean;
+  proposed?: boolean;
   level: Level;
 }
 
@@ -50,12 +55,26 @@ const TUNNEL_ALPHA = 0.5;
 // A line is this wide in map pixels, and never thinner than this on screen.
 const WIDTH_MAP_PX = 3;
 const MIN_WIDTH_PX = 2.5;
+// The strokes of paper that break a line being built, and the color between them, in line
+// widths. The paper is the lesser part, so twin tracks whose strokes fall out of step
+// still show their color.
+const BUILDING_BREAKS = [1.25, 2.5];
+// The dots of a proposed line, and the gaps between them. A stroke of no length with a
+// round end is a dot.
+const PROPOSED_DOTS = [0, 2.5];
 const STATION_MAP_PX = 5;
 const MIN_STATION_PX = 3;
 const MAX_STATION_PX = 7;
+// A proposed station's dot, as a share of a station's.
+const PROPOSED_STATION = 0.7;
 // Below this the whole network is on screen and the names would crowd it.
 const NAMES_MIN_IMAGE_ZOOM = 0.15;
 const NAME_PX = 12;
+
+// Dots are faint enough: a proposed line is drawn as strongly under the ground as over it.
+function alpha(line: Line): number {
+  return line.level === "tunnel" && !line.proposed ? TUNNEL_ALPHA : 1;
+}
 
 function wantsMetro(): boolean {
   try {
@@ -135,22 +154,32 @@ export function startMetro(
       (track) =>
         track.right > left && track.left < right && track.bottom > top && track.top < bottom,
     );
+    const dots = PROPOSED_DOTS.map((part) => part * width);
     for (const level of LEVELS) {
       const here = inView.filter((track) => track.level === level);
-      context.globalAlpha = level === "tunnel" ? TUNNEL_ALPHA : 1;
-      // Every casing before any color, so one track's edge never cuts across its twin.
-      context.setLineDash([]);
+      // Every casing before any color, so one track's edge never cuts across its twin. A
+      // proposed line is dots and nothing between them; the others lie on a whole casing.
       context.lineCap = "round";
       context.strokeStyle = CASING;
       context.lineWidth = width + 2 * density;
       for (const track of here) {
+        context.setLineDash(track.proposed ? dots : []);
+        context.globalAlpha = alpha(track);
         trace(track, scale, originX, originY);
       }
       context.lineWidth = width;
       for (const track of here) {
         context.strokeStyle = track.colour ?? PLAIN;
-        context.lineCap = track.open ? "round" : "butt";
-        context.setLineDash(track.open ? [] : [width * 2, width * 1.5]);
+        context.setLineDash(track.proposed ? dots : []);
+        context.globalAlpha = alpha(track);
+        trace(track, scale, originX, originY);
+      }
+      // Paper over the color, so that a dark line reads as broken too.
+      context.lineCap = "butt";
+      context.strokeStyle = PAPER;
+      context.setLineDash(BUILDING_BREAKS.map((part) => part * width));
+      for (const track of here.filter((each) => !each.open && !each.proposed)) {
+        context.globalAlpha = alpha(track);
         trace(track, scale, originX, originY);
       }
     }
@@ -170,7 +199,7 @@ export function startMetro(
       const x = originX + station.x * scale;
       const y = originY + station.y * scale;
       context.beginPath();
-      context.arc(x, y, radius, 0, 2 * Math.PI);
+      context.arc(x, y, station.proposed ? radius * PROPOSED_STATION : radius, 0, 2 * Math.PI);
       context.fillStyle = station.open ? PAPER : CASING;
       context.strokeStyle = station.open ? CASING : PAPER;
       context.lineWidth = 1.5 * density;
@@ -242,8 +271,8 @@ export function startMetro(
     .then((loaded: Metro) => {
       if (loaded.lines.length) {
         metro = loaded;
-        // The switch appears only once there is a metro to switch.
-        toggle.closest("label")?.removeAttribute("hidden");
+        // The switch and its key appear only once there is a metro to switch.
+        toggle.closest(".metro-setting")?.removeAttribute("hidden");
         refresh();
       }
     })

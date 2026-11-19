@@ -140,6 +140,10 @@
           <li>
             Water and other animation, and the metro lines, can be turned off in Settings (⚙).
           </li>
+          <li>
+            A metro line is solid where trains run, dashed where it is being built, and dotted where
+            it is only proposed. Solid and dashed lines are faint underground.
+          </li>
         </ul>
         <p><a href="/about.html">How this map was made, and full credits</a></p>
       </div>
@@ -147,7 +151,15 @@
 
     <div id="settings-panel" class="panel settings" hidden>
       <label><input id="animation" type="checkbox" /> Animation</label>
-      <label hidden><input id="metro" type="checkbox" /> Metro lines</label>
+      <div class="metro-setting" hidden>
+        <label><input id="metro" type="checkbox" /> Metro lines</label>
+        <ul class="metro-key">
+          <li><i></i>Open</li>
+          <li><i class="building"></i>Being built</li>
+          <li><i class="proposed"></i>Proposed</li>
+          <li><i class="underground"></i>Underground</li>
+        </ul>
+      </div>
     </div>
 
     <footer class="panel credits">

@@ -300,12 +300,40 @@ button:focus-visible,
   white-space: nowrap;
 }
 
-.settings label[hidden] {
-  display: none;
+.metro-setting {
+  margin-top: 6px;
 }
 
-.settings label + label {
-  margin-top: 6px;
+/* How a metro line is drawn, by what it is: the strokes are the ones on the map. */
+.metro-key {
+  margin: 6px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  list-style: none;
+}
+
+.metro-key li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metro-key i {
+  width: 26px;
+  border-top: 3px solid var(--ink);
+}
+
+.metro-key .building {
+  border-top-style: dashed;
+}
+
+.metro-key .proposed {
+  border-top-style: dotted;
+}
+
+.metro-key .underground {
+  opacity: 0.5;
 }
 
 .settings input {
