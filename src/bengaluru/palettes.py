@@ -131,6 +131,11 @@ PALETTE = CANDIDATES["monsoon"]
 # The city's flowering trees, by the tree that wears each color: pink tabebuia, purple
 # jacaranda, and red gulmohar. Picked by eye to stand clear of monsoon's greens and roofs.
 BLOSSOM = {"tabebuia": "#e88fb5", "jacaranda": "#9b87d9", "gulmohar": "#e4572e"}
+# The months, counted from 1, in which each is in flower, to the nearest whole month. The
+# trees keep no calendar, and a warm year moves them; this is the usual year.
+BLOOM_MONTHS = {"tabebuia": (1, 2, 3), "jacaranda": (3, 4), "gulmohar": (4, 5, 6)}
+# What shines at night: a window with someone home, and a street lamp.
+LIGHTS = {"window": "#ffd98a", "lamp": "#ffb454"}
 
 
 def lookup(palette: dict[str, str], slots: dict[str, int] = SLOT) -> bytes:

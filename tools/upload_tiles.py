@@ -31,6 +31,7 @@ from pathlib import Path
 
 from bengaluru.areas import get_area
 from bengaluru.detail import frames_fingerprint
+from bengaluru.tile import pyramids_of
 
 BUCKET = "bengaluru-tiles"
 ACCOUNT_ID = "091e65b116deac24fcc274459b6fbde0"
@@ -113,9 +114,9 @@ def deadline() -> datetime | None:
 
 
 def named_pyramids() -> set[str]:
-    """The pyramids the manifest on disk names: one whole build."""
+    """The pyramids the manifest on disk names, each view's map and its layers: one whole build."""
     manifest = json.loads((TILES / INDEXES[0]).read_text())
-    return {view["pyramid"] for view in manifest["views"].values()}
+    return pyramids_of(manifest["views"])
 
 
 def main() -> None:
@@ -124,8 +125,10 @@ def main() -> None:
     done = set(json.loads(DONE.read_text())) if DONE.exists() else set()
     # A view drawn from older data or drawing code is due to be drawn again; skip it.
     inputs = frames_fingerprint(get_area(AREA))
-    views = json.loads(VIEWS_RECORD.read_text()).values()
-    finished = {view["pyramid"] for view in views if view.get("inputs") == inputs}
+    views = json.loads(VIEWS_RECORD.read_text())
+    finished = pyramids_of(
+        {name: view for name, view in views.items() if view.get("inputs") == inputs}
+    )
     named = named_pyramids()
     wanted = finished if PYRAMIDS_ONLY else named | finished
     for pyramid in sorted((TILES / "pyramid").iterdir()):

@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import geopandas as gpd
@@ -25,11 +26,13 @@ from bengaluru.detail import (
     build_scene,
     detail_colors,
     frames_dir,
+    layer_path,
     manifest_path,
     missing_cells,
     open_frames_dir,
     render_detail,
     render_frame,
+    save_frame,
     view_projection,
 )
 from bengaluru.palettes import BLOSSOM
@@ -199,3 +202,46 @@ def test_frames_from_other_inputs_are_thrown_away(tmp_path):
     (directory / "000_001.png").write_bytes(b"frame")
     open_frames_dir(directory, "second")
     assert missing_cells(directory, [(1, 0)]) == [(1, 0)]
+
+
+def test_a_frame_is_kept_as_the_map_and_a_layer_each_for_blossom_and_lights(tmp_path):
+    names = ("tree", "tabebuia", "gulmohar_light", "window_glow", "lamp_shade", "road_track")
+    slots = np.array([[DETAIL_SLOT[name] for name in names]], dtype="uint8")
+    path = tmp_path / "000_000.png"
+
+    save_frame(slots, path)
+
+    def rgb(name):
+        return tuple(bytes.fromhex(detail_colors()[name].lstrip("#")))
+
+    def pixels(source, mode):
+        picture = np.asarray(Image.open(source).convert(mode))
+        return [tuple(pixel) for pixel in picture.reshape(-1, len(mode)).tolist()]
+
+    # By day, and out of season: a tree in flower is green, and a light is what it stands on.
+    base = pixels(path, "RGB")
+    green = [rgb("tree"), rgb("shrub"), rgb("canopy_light")]
+    assert base == [*green, rgb("road_major"), rgb("shadow_built"), rgb("road_track")]
+    bloom = pixels(layer_path(path, "bloom"), "RGBA")
+    assert [pixel[3] for pixel in bloom] == [0, 255, 255, 0, 0, 0]
+    assert [pixel[:3] for pixel in bloom[1:3]] == [rgb("tabebuia"), rgb("gulmohar_light")]
+    lights = pixels(layer_path(path, "lights"), "RGB")
+    assert [*lights[:3], lights[5]] == [(0, 0, 0)] * 4
+    assert (0, 0, 0) not in lights[3:5]
+
+
+def test_night_lights_do_not_show_by_day():
+    layers = sample_layers()
+    roads = gpd.GeoDataFrame(
+        {"width_m": [12.0], "road_class": ["primary"]},
+        geometry=[shapely.LineString([(0, 80), (300, 80)])],
+        crs=32643,
+    )
+    scene = build_scene(replace(layers, roads=roads))
+    slots = render_detail(scene, centered_viewport(PROJECTION_B, 150, 150, 600, 600))
+    for lights in (("window_glow", "window_glow_shade"), ("lamp", "lamp_shade")):
+        assert np.isin(slots, [DETAIL_SLOT[name] for name in lights]).any()
+    colors = detail_colors()
+    assert colors["window_glow"] == colors["road_major"]
+    assert colors["lamp"] == colors["road_track"]
+    assert colors["lamp_shade"] == colors["shadow_built"]

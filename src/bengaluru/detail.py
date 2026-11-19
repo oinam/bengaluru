@@ -28,7 +28,7 @@ from shapely.ops import substring
 from bengaluru.areas import Area
 from bengaluru.fetch import raw_dir
 from bengaluru.osm import load_features
-from bengaluru.palettes import BLOSSOM, PALETTE, SLOT, SLOTS, lookup
+from bengaluru.palettes import BLOSSOM, LIGHTS, PALETTE, SLOT, SLOTS, lookup
 from bengaluru.prepare import METRIC_CRS, derived_path
 from bengaluru.render import (
     LINED_ROADS,
@@ -73,6 +73,10 @@ _EXTRA = (
     "shadow_built",
     *BLOSSOM,
     *(f"{name}_light" for name in BLOSSOM),
+    "window_glow",
+    "window_glow_shade",
+    "lamp",
+    "lamp_shade",
 )
 DETAIL_SLOT = {**SLOT, **{name: len(SLOTS) + index for index, name in enumerate(_EXTRA)}}
 
@@ -104,7 +108,31 @@ SHADOW = {
     "water_light": "water",
     "canopy_dark": "background",
     "shadow_built": "road_minor",
+    "lamp": "lamp_shade",
 }
+# What shines at night, by the light it shines with. By day each is the color of what it
+# stands on: a window on a sunlit wall or a shaded one, a lamp on a footpath in sun or shade.
+GLOW = {
+    "window_glow": "window",
+    "window_glow_shade": "window",
+    "lamp": "lamp",
+    "lamp_shade": "lamp",
+}
+BY_DAY = {
+    "window_glow": "road_major",
+    "window_glow_shade": "background",
+    "lamp": "road_track",
+    "lamp_shade": "shadow_built",
+}
+# A frame is kept as the map every hour and season shares, and as these, each a picture of
+# the same size holding only its own pixels, for the viewer to lay over the map. The bloom
+# is clear elsewhere. The lights are black elsewhere, to be added as light is: only in a
+# picture with no clear part does the tiler keep the brightest pixel as it shrinks one.
+LAYERS = ("bloom", "lights")
+CLEAR_LAYERS = ("bloom",)
+# Of a hundred windows, how many have someone home at night.
+WINDOWS_LIT_PERCENT = 42
+LAMP_EVERY_M = 30.0
 TREE_ODDS = {
     "tree": 0.72,
     "shrub": 0.18,
@@ -178,11 +206,31 @@ def detail_colors() -> dict[str, str]:
     for name, color in BLOSSOM.items():
         colors[name] = color
         colors[f"{name}_light"] = _mix(color, "#ffffff", 0.4)
+    for name, by_day in BY_DAY.items():
+        colors[name] = colors[by_day]
     return colors
 
 
 def detail_lookup() -> bytes:
+    """Return the palette of a picture on its own: by day, with every tree in flower."""
     return lookup(detail_colors(), DETAIL_SLOT)
+
+
+def base_lookup() -> bytes:
+    """Return the palette of the map every hour and season shares: by day, no tree in flower."""
+    colors = detail_colors()
+    for name in BLOSSOM:
+        colors[name] = colors["shrub"]
+        colors[f"{name}_light"] = colors["canopy_light"]
+    return lookup(colors, DETAIL_SLOT)
+
+
+def layer_colors(layer: str) -> dict[str, str]:
+    """Return the slots a layer shows, each with its color there."""
+    if layer == "lights":
+        return {name: LIGHTS[light] for name, light in GLOW.items()}
+    colors = detail_colors()
+    return {name: colors[name] for kind in BLOSSOM for name in (kind, f"{kind}_light")}
 
 
 def hash_field(xs: np.ndarray, ys: np.ndarray, salt: int) -> np.ndarray:
@@ -366,6 +414,31 @@ def _paint_roads(canvas: np.ndarray, layers: Layers, view: Viewport) -> None:
     lined = roads[roads.road_class.isin(LINED_ROADS)]
     marks = [(g.intersection(layers.patch), 1) for line in lined.geometry for g in _dashes(line)]
     canvas[_burn(marks, view).astype(bool)] = DETAIL_SLOT["road_line"]
+    _paint_lamps(canvas, major, view)
+
+
+def _paint_lamps(canvas: np.ndarray, major: gpd.GeoDataFrame, view: Viewport) -> None:
+    """Stand a street lamp on the footpath every so often along each major road, on
+    alternate sides. By day a lamp is the footpath's own color, so only the night shows it.
+    """
+    for line, width in zip(major.geometry, major.width_m, strict=True):
+        count = int(line.length // LAMP_EVERY_M)
+        if count < 1:
+            continue
+        along = (np.arange(count) + 0.5) * LAMP_EVERY_M
+        here = shapely.get_coordinates(shapely.line_interpolate_point(line, along))
+        ahead = shapely.get_coordinates(shapely.line_interpolate_point(line, along + 1.0))
+        heading = ahead - here
+        heading /= np.maximum(np.linalg.norm(heading, axis=1, keepdims=True), 1e-9)
+        aside = np.where(np.arange(count) % 2, 1.0, -1.0) * (width / 2 + FOOTPATH_M / 2)
+        x, y = _screen(view, here[:, 0] - heading[:, 1] * aside, here[:, 1] + heading[:, 0] * aside)
+        x, y = np.rint(x).astype(int), np.rint(y).astype(int)
+        for dx, dy in ((0, 0), (1, 0), (0, -1), (1, -1)):
+            px, py = x + dx, y + dy
+            inside = (px >= 0) & (px < view.width) & (py >= 0) & (py < view.height)
+            px, py = px[inside], py[inside]
+            footpath = canvas[py, px] == DETAIL_SLOT["road_track"]
+            canvas[py[footpath], px[footpath]] = DETAIL_SLOT["lamp"]
 
 
 def _paint_rails(canvas: np.ndarray, rails: gpd.GeoDataFrame, patch, view: Viewport) -> None:
@@ -432,6 +505,7 @@ def _windows(draw, view, p, q, top, lit, shutters: bool) -> None:
     if count < 1:
         return
     color = DETAIL_SLOT["road_major"] if lit else DETAIL_SLOT["background"]
+    glow = DETAIL_SLOT["window_glow" if lit else "window_glow_shade"]
     start = 0
     if shutters:
         shutter = DETAIL_SLOT["road_minor"] if lit else DETAIL_SLOT["road_major"]
@@ -456,7 +530,8 @@ def _windows(draw, view, p, q, top, lit, shutters: bool) -> None:
         for index in range(count):
             point = p + (q - p) * ((index + 0.5) / count)
             x, y = _project(view, *point, z)
-            draw.rectangle([x - 1, y - 2, x, y], fill=color)
+            home = _hash(SEED, f"{point[0]:.1f}/{point[1]:.1f}/{storey}", 100) < WINDOWS_LIT_PERCENT
+            draw.rectangle([x - 1, y - 2, x, y], fill=glow if home else color)
         storey += 1
 
 
@@ -1215,13 +1290,42 @@ def _build_area_scene(area, layers, surfaces, landmarks, trees) -> Scene:
     )
 
 
-def save_slots(slots: np.ndarray, path: Path) -> None:
+def _save_indexed(slots: np.ndarray, path: Path, palette: bytes, **options) -> None:
     image = Image.fromarray(slots, mode="P")
-    image.putpalette(detail_lookup())
+    image.putpalette(palette)
     # Written beside the target and renamed, so a frame on disk is always a whole frame.
     partial = path.with_name(path.name + ".part")
-    image.save(partial, format="PNG", optimize=True)
+    image.save(partial, format="PNG", optimize=True, **options)
     partial.replace(path)
+
+
+def save_slots(slots: np.ndarray, path: Path) -> None:
+    """Write a picture to look at on its own: by day, with every tree in flower."""
+    _save_indexed(slots, path, detail_lookup())
+
+
+def layer_path(path: Path, layer: str) -> Path:
+    """Return where a frame's layer is kept: beside the frame, in a folder of the layer's name."""
+    return path.parent / layer / path.name
+
+
+def save_frame(slots: np.ndarray, path: Path) -> None:
+    """Write a frame of the map, and each of its layers.
+
+    The frame itself is written last, so a frame on disk has its layers.
+    """
+    empty = DETAIL_SLOT["background"]
+    for layer in LAYERS:
+        colors = layer_colors(layer)
+        shown = np.zeros(256, dtype=bool)
+        shown[[DETAIL_SLOT[name] for name in colors]] = True
+        palette = lookup({**dict.fromkeys(DETAIL_SLOT, "#000000"), **colors}, DETAIL_SLOT)
+        clear = {"transparency": bytes(shown * np.uint8(255))} if layer in CLEAR_LAYERS else {}
+        target = layer_path(path, layer)
+        target.parent.mkdir(exist_ok=True)
+        own = np.where(shown[slots], slots, empty).astype("uint8")
+        _save_indexed(own, target, palette, **clear)
+    _save_indexed(slots, path, base_lookup())
 
 
 def detail(area: Area) -> None:
@@ -1328,7 +1432,7 @@ def _render_and_save(cell: tuple[int, int]) -> bool:
         return False
     column, row = cell
     slots = render_frame(_worker["scene"], _worker["canvas"], column, row)
-    save_slots(slots, frame_path(frames_dir(_worker["area"], _worker["view"]), column, row))
+    save_frame(slots, frame_path(frames_dir(_worker["area"], _worker["view"]), column, row))
     return True
 
 

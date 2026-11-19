@@ -3,8 +3,16 @@ from shapely.geometry import LineString, Point
 
 from bengaluru.areas import Area
 from bengaluru.detail import PROJECTION
+from bengaluru.palettes import BLOSSOM
 from bengaluru.prepare import METRIC_CRS, derived_path, metro_path
-from bengaluru.tile import _drop_old_pyramids, flow_lines, metro_index, pyramid_version
+from bengaluru.tile import (
+    _drop_old_pyramids,
+    flow_lines,
+    layer_key,
+    metro_index,
+    pyramid_version,
+    pyramids_of,
+)
 
 
 def test_pyramid_version_follows_the_frame_bytes(tmp_path):
@@ -122,3 +130,30 @@ def test_only_the_pyramids_no_view_points_at_are_dropped(tmp_path):
         (tmp_path / "pyramid" / name).mkdir(parents=True)
     _drop_old_pyramids(tmp_path, {"315": {"pyramid": "kept"}})
     assert [path.name for path in (tmp_path / "pyramid").iterdir()] == ["kept"]
+
+
+def test_a_view_keeps_its_layers_pyramids_with_its_map(tmp_path):
+    for name in ("old", "map", "bloom", "lights"):
+        (tmp_path / "pyramid" / name).mkdir(parents=True)
+    views = {"315": {"pyramid": "map", "bloom": "bloom", "lights": "lights", "inputs": "old"}}
+    assert pyramids_of(views) == {"map", "bloom", "lights"}
+    _drop_old_pyramids(tmp_path, views)
+    assert sorted(path.name for path in (tmp_path / "pyramid").iterdir()) == [
+        "bloom",
+        "lights",
+        "map",
+    ]
+
+
+def test_the_layer_key_tells_each_flowering_tree_by_its_colors_and_months():
+    key = layer_key()
+    assert set(key["bloom"]) == set(BLOSSOM)
+    for kind, blossom in key["bloom"].items():
+        assert blossom["colors"][0] == BLOSSOM[kind]
+        assert all(1 <= month <= 12 for month in blossom["months"])
+
+
+def test_a_layer_has_its_own_pyramid_version(tmp_path):
+    frame = tmp_path / "000_000.png"
+    frame.write_bytes(b"same")
+    assert pyramid_version([frame], 1) != pyramid_version([frame], 1, 1024, ":bloom:mean")

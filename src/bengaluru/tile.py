@@ -16,6 +16,7 @@ from bengaluru.areas import Area
 from bengaluru.detail import (
     DEFAULT_VIEW,
     LANDMARKS_PATH,
+    LAYERS,
     PROJECTION,
     RENDERED_VIEWS,
     SPRITE_DIR,
@@ -23,11 +24,14 @@ from bengaluru.detail import (
     _render_view,
     frames_dir,
     frames_fingerprint,
+    layer_colors,
+    layer_path,
     load_scene,
     manifest_path,
     plan_view,
     trees_path,
 )
+from bengaluru.palettes import BLOOM_MONTHS, BLOSSOM
 from bengaluru.prepare import METRIC_CRS, derived_path, metro_path, prepare_metro
 from bengaluru.render import parts
 
@@ -39,6 +43,15 @@ NOTABLE_KINDS = {"landmark", "university"}
 NOTABLE_NAMES: set[str] = set()
 TILE_SUFFIX = ".webp[lossless=true,effort=4]"
 PYRAMID_DIR = "pyramid"
+# A layer is mostly clear, so its tiles are larger: a quarter as many files to keep and send.
+LAYER_TILE_PX = 1024
+# How a layer's pixels shrink into the pyramid's smaller levels. Blossom thins out as the
+# trees it sits on do. A light does not: the brightest pixel is kept, so a lamp too small
+# to see still shows, and the city seen from afar glows where it is built. The viewer
+# dims that glow as it grows.
+LAYER_SHRINK = {"bloom": "mean", "lights": "max"}
+# What a view's entry names its pyramids by: the map, then each layer.
+PYRAMID_KEYS = ("pyramid", *LAYERS)
 VIEWS_RECORD = "views.json"
 FLOW_SIMPLIFY_M = 6.0
 METRO_SIMPLIFY_M = 2.0
@@ -48,9 +61,9 @@ def tiles_dir(area: Area) -> Path:
     return Path("out") / area.name / "tiles"
 
 
-def pyramid_version(paths: list[Path], columns: int) -> str:
+def pyramid_version(paths: list[Path], columns: int, tile_px: int = TILE_PX, how: str = "") -> str:
     """Return a short hash of everything that decides the tile bytes."""
-    digest = hashlib.blake2b(f"{TILE_PX}:{TILE_SUFFIX}:{columns}".encode(), digest_size=5)
+    digest = hashlib.blake2b(f"{tile_px}:{TILE_SUFFIX}:{columns}{how}".encode(), digest_size=5)
     for path in paths:
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -200,29 +213,36 @@ def landmark_credits() -> list[dict]:
     return sorted(entries.values(), key=lambda credit: credit["name"])
 
 
-def _build_pyramid(area: Area, view: str, target: Path, manifest: dict) -> str:
-    """Write one view's tiles and return its version."""
+def _build_pyramid(
+    area: Area, view: str, target: Path, manifest: dict, layer: str | None = None
+) -> str:
+    """Write the tiles of one view's map, or of one of its layers, and return their version."""
     columns, rows = manifest["columns"], manifest["rows"]
     paths = [
         frames_dir(area, view) / f"{row:03d}_{column:03d}.png"
         for row in range(rows)
         for column in range(columns)
     ]
+    tile_px, shrink = TILE_PX, "mean"
+    if layer:
+        paths = [layer_path(path, layer) for path in paths]
+        tile_px, shrink = LAYER_TILE_PX, LAYER_SHRINK[layer]
     images = [pyvips.Image.new_from_file(str(path), access="sequential") for path in paths]
     joined = pyvips.Image.arrayjoin(images, across=columns)
-    version = pyramid_version(paths, columns)
+    version = pyramid_version(paths, columns, tile_px, f":{layer}:{shrink}" if layer else "")
     pyramid = target / PYRAMID_DIR / version
     # A build stopped partway through leaves an unfinished pyramid; start it again.
     shutil.rmtree(pyramid, ignore_errors=True)
     pyramid.mkdir(parents=True)
     joined.dzsave(
         str(pyramid / area.name),
-        tile_size=TILE_PX,
+        tile_size=tile_px,
         overlap=0,
         suffix=TILE_SUFFIX,
         depth="onepixel",
+        region_shrink=shrink,
     )
-    print(f"{view} {pyramid}: {joined.width} x {joined.height}")
+    print(f"{view} {layer or 'map'} {pyramid}: {joined.width} x {joined.height}")
     return version
 
 
@@ -231,10 +251,30 @@ def _view_entry(area: Area, view: str, target: Path) -> dict:
     manifest = json.loads(manifest_path(area, view).read_text())
     return {
         "pyramid": _build_pyramid(area, view, target, manifest),
+        **{layer: _build_pyramid(area, view, target, manifest, layer) for layer in LAYERS},
         "matrix": manifest["matrix"],
         "x_offset": manifest["x_offset"],
         "y_offset": manifest["y_offset"],
     }
+
+
+def layer_key() -> dict:
+    """Return what the viewer needs to lay the layers over the map: their tile size, and for
+    each flowering tree the colors it wears and the months, from 1, it is in flower.
+    """
+    colors = layer_colors("bloom")
+    return {
+        "tile_px": LAYER_TILE_PX,
+        "bloom": {
+            kind: {"colors": [colors[kind], colors[f"{kind}_light"]], "months": BLOOM_MONTHS[kind]}
+            for kind in BLOSSOM
+        },
+    }
+
+
+def pyramids_of(views: dict) -> set[str]:
+    """Return every pyramid the views name: each one's map and its layers."""
+    return {entry[key] for entry in views.values() for key in PYRAMID_KEYS if key in entry}
 
 
 def _write_indexes(area: Area, target: Path, views: dict) -> None:
@@ -248,7 +288,8 @@ def _write_indexes(area: Area, target: Path, views: dict) -> None:
     (target / "flow.json").write_text(json.dumps(flow))
     metro = metro_index(area, manifest["x_offset"], manifest["y_offset"])
     (target / "metro.json").write_text(json.dumps(metro, ensure_ascii=False))
-    (target / "manifest.json").write_text(json.dumps({**manifest, "views": views}))
+    index = {**manifest, "views": views, "layers": layer_key()}
+    (target / "manifest.json").write_text(json.dumps(index))
     print(f"{len(entries)} search entries")
 
 
@@ -281,7 +322,7 @@ def refresh_metro(area: Area) -> None:
 
 def _drop_old_pyramids(target: Path, views: dict) -> None:
     """Delete the pyramids no view points at, left behind when a view is built again."""
-    current = {entry["pyramid"] for entry in views.values()}
+    current = pyramids_of(views)
     for pyramid in (target / PYRAMID_DIR).iterdir():
         if pyramid.is_dir() and pyramid.name not in current:
             shutil.rmtree(pyramid)
