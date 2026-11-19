@@ -28,7 +28,7 @@ from bengaluru.detail import (
     plan_view,
     trees_path,
 )
-from bengaluru.prepare import METRIC_CRS, derived_path
+from bengaluru.prepare import METRIC_CRS, derived_path, metro_path, prepare_metro
 from bengaluru.render import parts
 
 TILE_PX = 512
@@ -120,20 +120,22 @@ def metro_index(area: Area, x_offset: float, y_offset: float) -> dict:
     and each station by name.
 
     Positions are on the ground. `raised_px` is how far up the canvas the viewer moves
-    whatever is `raised`, to set it on the viaduct's deck. An area the metro does not
-    reach has no lines and no stations.
+    whatever is `raised`, to set it on the viaduct's deck. A line or a station is open,
+    proposed, or, if neither, being built. An area the metro does not reach has no lines
+    and no stations.
     """
-    path = derived_path(area)
-    layers = set(pyogrio.list_layers(path)[:, 0])
+    path = metro_path(area)
+    layers = set(pyogrio.list_layers(path)[:, 0]) if path.exists() else set()
     lines, stations = [], []
     if "metro" in layers:
         for row in gpd.read_file(path, layer="metro").itertuples():
             lines.extend(
                 {
-                    "line": row.line,
-                    # A route with no color tag reads back as a missing number.
+                    # A name or a color that no tag gives reads back as a missing number.
+                    "line": row.line if isinstance(row.line, str) else None,
                     "colour": row.colour if isinstance(row.colour, str) else None,
                     "open": bool(row.open),
+                    "proposed": bool(row.proposed),
                     "level": row.level,
                     "points": points,
                 }
@@ -143,7 +145,14 @@ def metro_index(area: Area, x_offset: float, y_offset: float) -> dict:
         for row in gpd.read_file(path, layer="stations").itertuples():
             x, y = _to_canvas(row.geometry.x, row.geometry.y, x_offset, y_offset)
             stations.append(
-                {"name": row.name, "x": x, "y": y, "open": bool(row.open), "level": row.level}
+                {
+                    "name": row.name,
+                    "x": x,
+                    "y": y,
+                    "open": bool(row.open),
+                    "proposed": bool(row.proposed),
+                    "level": row.level,
+                }
             )
     stations.sort(key=lambda station: (station["name"], station["x"]))
     return {
@@ -251,6 +260,23 @@ def tile(area: Area) -> None:
         plan_view(area, load_scene(area), DEFAULT_VIEW)
     views = {view: _view_entry(area, view, target) for view in RENDERED_VIEWS}
     _write_indexes(area, target, views)
+
+
+def refresh_metro(area: Area) -> None:
+    """Read the metro again from the downloads and write its index into a map already built.
+
+    Nothing is drawn: the viewer lays the metro over the map, so a line that opens, or a new
+    plan, needs no night's work. A map not built yet gets its index when it is built.
+    """
+    prepare_metro(area)
+    target = tiles_dir(area) / "metro.json"
+    if not (target.parent.exists() and manifest_path(area).exists()):
+        print(f"metro: {area.name} is not built; its index is written when it is")
+        return
+    manifest = json.loads(manifest_path(area).read_text())
+    metro = metro_index(area, manifest["x_offset"], manifest["y_offset"])
+    target.write_text(json.dumps(metro, ensure_ascii=False))
+    print(f"metro: {target}")
 
 
 def _drop_old_pyramids(target: Path, views: dict) -> None:

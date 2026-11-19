@@ -87,6 +87,7 @@ uv run bengaluru detail  --area vidhana-soudha  # writes one near-final 2048 px 
 uv run bengaluru frames  --area vidhana-soudha  # renders the four views as seamless 2048 px frames
 uv run bengaluru build   --area vidhana-soudha  # renders and tiles the four views one at a time; resumes at the first missing frame
 uv run bengaluru tile    --area vidhana-soudha  # builds each view's Deep Zoom pyramid and the search index from frames on disk
+mise run metro [area]                           # reads the metro again from the downloads on disk and rewrites a built map's metro.json; draws nothing, takes seconds
 uv run python tools/four_views.py [area]        # lays the four built views side by side in one PNG in out/<area>/
 uv run python tools/crop.py central lalbagh 77.58691 12.94886 [view] [px]   # one frame of a built area centered on a place, into out/<area>/
 uv run python tools/look_options.py central 77.5790 12.9865   # one place in several candidate looks, side by side, for Brajeshwar to choose from; changes nothing

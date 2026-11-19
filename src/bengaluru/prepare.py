@@ -48,6 +48,8 @@ ROAD_WIDTHS_M = {
 AIRFIELD_WIDTHS_M = {"runway": 45.0, "taxiway": 23.0}
 # Tracks that carry trains: the railways and the metro. Trams and abandoned lines are not here.
 RAIL_KINDS = {"rail", "subway", "light_rail", "narrow_gauge"}
+# The metro, as its planned track is tagged: no route names a line that is only planned.
+METRO_NETWORK = "Namma Metro"
 # The width of a viaduct; a detected "roof" that sits on it is the viaduct itself.
 RAIL_CORRIDOR_M = 10.0
 WATERWAY_WIDTHS_M = {"river": 30.0, "canal": 8.0, "stream": 4.0, "drain": 2.0, "ditch": 2.0}
@@ -70,8 +72,17 @@ def derived_path(area: Area) -> Path:
     return Path("data/derived") / f"{area.name}.gpkg"
 
 
+def metro_path(area: Area) -> Path:
+    return Path("data/derived") / f"{area.name}_metro.gpkg"
+
+
 def stats_path(area: Area) -> Path:
     return Path("data/derived") / f"{area.name}_stats.json"
+
+
+def _patch(area: Area):
+    """Return the area's bounds as a metric polygon."""
+    return gpd.GeoSeries([shapely.box(*area.bounds)], crs=4326).to_crs(METRIC_CRS).iloc[0]
 
 
 def _to_metric(rows: list[dict], geometries: list) -> gpd.GeoDataFrame:
@@ -186,6 +197,27 @@ def rails(features: list[Feature]) -> gpd.GeoDataFrame:
     return _to_metric(rows, geometries)
 
 
+def _is_planned_track(feature: Feature) -> bool:
+    """Tell a way drawn where the metro plans a line. A planned station's outline is not one."""
+    tags = feature.tags
+    return (
+        feature.osm_type == "way"
+        and tags.get("railway") == "proposed"
+        and tags.get("network") == METRO_NETWORK
+        and "station" not in tags
+        and _is_line(feature.geometry)
+    )
+
+
+def _may_be_metro(tags: dict[str, str]) -> bool:
+    """Tell what `metro` could use, to pass over the rest of a download."""
+    return (
+        "railway" in tags
+        or tags.get("construction") == "station"
+        or tags.get("proposed:station") == "subway"
+    )
+
+
 def _level(tags: dict[str, str]) -> str:
     """Tell where a metro track runs, as the map draws it: only open track gets a viaduct."""
     if tags.get("tunnel", "no") != "no" or _layer(tags) < 0:
@@ -200,6 +232,10 @@ def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.
     and color. It is open if a route in service names it, whatever its own tag says: the
     relations are kept up to date where the ways are not. Track no route names, the depots
     and crossovers, is left out, and so is an area the metro does not reach.
+
+    A line only planned has no route. Its track is the metro's own planned track, with the
+    name and color of the way, and its stations are the ones tagged as planned for a metro.
+    What is neither open nor proposed is being built.
     """
     line_of: dict[int, dict] = {}
     building: set[int] = set()
@@ -210,6 +246,7 @@ def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.
             "line": tags.get("ref") or tags.get("name"),
             "colour": tags.get("colour"),
             "open": tags.get("route") == "subway",
+            "proposed": False,
         }
         for way in route.ways:
             line_of.setdefault(way, line)
@@ -223,10 +260,21 @@ def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.
         and f.tags.get("railway") in ("subway", "construction")
         and _is_line(f.geometry)
     ]
-    if not tracks:
+    planned = [f for f in features if _is_planned_track(f)]
+    if not tracks and not planned:
         return {}
     rows = [{**line_of[f.osm_id], "level": _level(f.tags)} for f in tracks]
-    lines = _to_metric(rows, [f.geometry for f in tracks])
+    rows += [
+        {
+            "line": f.tags.get("name"),
+            "colour": f.tags.get("colour"),
+            "open": False,
+            "proposed": True,
+            "level": _level(f.tags),
+        }
+        for f in planned
+    ]
+    lines = _to_metric(rows, [f.geometry for f in (*tracks, *planned)])
     lines = lines.assign(geometry=lines.geometry.intersection(patch))
     lines = lines[~lines.geometry.is_empty]
 
@@ -236,8 +284,10 @@ def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.
         if feature.osm_type != "node" or "name" not in tags:
             continue
         opened = tags.get("railway") == "station" and tags.get("station") == "subway"
-        if opened or (feature.osm_id in building and tags.get("construction") == "station"):
-            rows.append({"name": tags["name"], "open": opened})
+        proposed = tags.get("proposed:station") == "subway"
+        being_built = feature.osm_id in building and tags.get("construction") == "station"
+        if opened or proposed or being_built:
+            rows.append({"name": tags["name"], "open": opened, "proposed": proposed})
             points.append(feature.geometry)
     if lines.empty or not rows:
         return {} if lines.empty else {"metro": lines}
@@ -247,6 +297,28 @@ def metro(features: list[Feature], routes: list[Route], patch) -> dict[str, gpd.
     nearest = shapely.STRtree(lines.geometry.values).nearest(stations.geometry.values)
     stations = stations.assign(level=lines.level.to_numpy()[nearest])
     return {"metro": lines} | ({"stations": stations} if len(stations) else {})
+
+
+def _write_metro(area: Area, layers: dict[str, gpd.GeoDataFrame]) -> None:
+    """Write the metro to a file of its own, or leave none where there is no metro.
+
+    The viewer draws the metro over the map, so no frame is drawn from it. Kept apart from
+    the scene, it can change without the map being drawn again.
+    """
+    target = metro_path(area)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.unlink(missing_ok=True)
+    for name, frame in layers.items():
+        frame.to_file(target, layer=name, driver="GPKG")
+
+
+def prepare_metro(area: Area) -> None:
+    """Read the metro again from the downloads on disk, and nothing else."""
+    elements = load_elements(raw_dir(area) / "osm.json")
+    features = features_of([e for e in elements if _may_be_metro(e.get("tags", {}))])
+    layers = metro(features, routes_of(elements), _patch(area))
+    _write_metro(area, layers)
+    print(f"metro: {', '.join(f'{len(frame)} {name}' for name, frame in layers.items())}")
 
 
 def waterways(features: list[Feature]) -> gpd.GeoDataFrame:
@@ -435,7 +507,7 @@ def prepare(area: Area) -> None:
     raw = raw_dir(area)
     elements = load_elements(raw / "osm.json")
     features = features_of(elements)
-    patch = gpd.GeoSeries([shapely.box(*area.bounds)], crs=4326).to_crs(METRIC_CRS).iloc[0]
+    patch = _patch(area)
 
     water = water_polygons(features)
     rivers = waterways(features)
@@ -488,7 +560,7 @@ def prepare(area: Area) -> None:
         layers["surfaces"] = paved.assign(geometry=paved.geometry.intersection(patch))
     if not tracks.empty:
         layers["rails"] = tracks.assign(geometry=tracks.geometry.intersection(patch))
-    layers |= metro(features, routes_of(elements), patch)
+    _write_metro(area, metro(features, routes_of(elements), patch))
 
     target = derived_path(area)
     target.parent.mkdir(parents=True, exist_ok=True)

@@ -98,6 +98,24 @@ def test_the_metro_takes_its_lines_from_the_routes_that_name_its_track():
         Feature(
             "node", 8, {"railway": "station", "name": "A railway station"}, Point(77.59, 12.97)
         ),
+        Feature(
+            "way",
+            9,
+            {
+                "railway": "proposed",
+                "network": "Namma Metro",
+                "name": "Red Line",
+                "colour": "red",
+                "layer": "-1",
+            },
+            track,
+        ),
+        Feature("way", 10, {"railway": "proposed", "network": "Suburban Railway"}, track),
+        Feature(
+            "way", 11, {"railway": "proposed", "network": "Namma Metro", "station": "subway"}, track
+        ),
+        Feature("node", 12, {"proposed:station": "subway", "name": "C"}, Point(77.60, 12.97)),
+        Feature("node", 13, {"proposed": "station", "name": "A halt, one day"}, Point(77.6, 12.97)),
     ]
     purple = {"type": "route", "route": "subway", "ref": "Purple", "colour": "#e542de"}
     blue = {"type": "route", "construction": "subway", "ref": "Blue", "colour": "blue"}
@@ -110,12 +128,15 @@ def test_the_metro_takes_its_lines_from_the_routes_that_name_its_track():
     layers = metro(features, routes, patch)
 
     lines = layers["metro"]
-    assert lines.line.tolist() == ["Purple", "Purple", "Blue"]
-    assert lines.open.tolist() == [True, True, False]
-    assert lines.level.tolist() == ["raised", "tunnel", "ground"]
+    assert lines.line.tolist() == ["Purple", "Purple", "Blue", "Red Line"]
+    assert lines.colour.tolist() == ["#e542de", "#e542de", "blue", "red"]
+    assert lines.open.tolist() == [True, True, False, False]
+    assert lines.proposed.tolist() == [False, False, False, True]
+    assert lines.level.tolist() == ["raised", "tunnel", "ground", "tunnel"]
     stations = layers["stations"]
-    assert stations.name.tolist() == ["A", "B (u/c)"]
-    assert stations.open.tolist() == [True, False]
+    assert stations.name.tolist() == ["A", "B (u/c)", "C"]
+    assert stations.open.tolist() == [True, False, False]
+    assert stations.proposed.tolist() == [False, False, True]
 
 
 def test_an_area_the_metro_does_not_reach_has_no_metro_layers():

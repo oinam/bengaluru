@@ -3,7 +3,7 @@ from shapely.geometry import LineString, Point
 
 from bengaluru.areas import Area
 from bengaluru.detail import PROJECTION
-from bengaluru.prepare import METRIC_CRS, derived_path
+from bengaluru.prepare import METRIC_CRS, derived_path, metro_path
 from bengaluru.tile import _drop_old_pyramids, flow_lines, metro_index, pyramid_version
 
 
@@ -41,15 +41,21 @@ def test_flow_lines_keep_the_drawn_direction(tmp_path, monkeypatch):
 def test_the_metro_index_carries_lines_and_stations_on_the_ground(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     area = Area("test", 0.0, 0.0, 1.0, 1.0)
-    path = derived_path(area)
+    path = metro_path(area)
     path.parent.mkdir(parents=True)
     gpd.GeoDataFrame(
-        {"line": ["Purple"], "colour": ["#e542de"], "open": [True], "level": ["raised"]},
-        geometry=[LineString([(0.0, 0.0), (100.0, 0.0)])],
+        {
+            "line": ["Purple", "Red"],
+            "colour": ["#e542de", None],
+            "open": [True, False],
+            "proposed": [False, True],
+            "level": ["raised", "ground"],
+        },
+        geometry=[LineString([(0.0, 0.0), (100.0, 0.0)])] * 2,
         crs=METRIC_CRS,
     ).to_file(path, layer="metro", driver="GPKG")
     gpd.GeoDataFrame(
-        {"name": ["Majestic"], "open": [True], "level": ["raised"]},
+        {"name": ["Majestic"], "open": [True], "proposed": [False], "level": ["raised"]},
         geometry=[Point(100.0, 0.0)],
         crs=METRIC_CRS,
     ).to_file(path, layer="stations", driver="GPKG")
@@ -64,24 +70,34 @@ def test_the_metro_index_carries_lines_and_stations_on_the_ground(tmp_path, monk
             "line": "Purple",
             "colour": "#e542de",
             "open": True,
+            "proposed": False,
             "level": "raised",
             "points": [[10, 20], end],
-        }
+        },
+        {
+            "line": "Red",
+            "colour": None,
+            "open": False,
+            "proposed": True,
+            "level": "ground",
+            "points": [[10, 20], end],
+        },
     ]
     assert index["stations"] == [
-        {"name": "Majestic", "x": end[0], "y": end[1], "open": True, "level": "raised"}
+        {
+            "name": "Majestic",
+            "x": end[0],
+            "y": end[1],
+            "open": True,
+            "proposed": False,
+            "level": "raised",
+        }
     ]
 
 
 def test_the_metro_index_is_empty_where_there_is_no_metro(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    area = Area("test", 0.0, 0.0, 1.0, 1.0)
-    path = derived_path(area)
-    path.parent.mkdir(parents=True)
-    gpd.GeoDataFrame({"name": ["x"]}, geometry=[Point(0.0, 0.0)], crs=METRIC_CRS).to_file(
-        path, layer="pois", driver="GPKG"
-    )
-    index = metro_index(area, 0.0, 0.0)
+    index = metro_index(Area("test", 0.0, 0.0, 1.0, 1.0), 0.0, 0.0)
     assert index["lines"] == []
     assert index["stations"] == []
 

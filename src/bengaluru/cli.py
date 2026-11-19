@@ -17,6 +17,7 @@ STAGES = {
     "frames": "detail:frames",
     "tile": "tile:tile",
     "build": "tile:build",
+    "metro": "tile:refresh_metro",
 }
 
 

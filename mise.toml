@@ -60,6 +60,11 @@ description = "Build each view's Deep Zoom pyramid and the search index"
 usage = 'arg "[area]" default="central"'
 run = "uv run bengaluru tile --area ${usage_area}"
 
+[tasks.metro]
+description = "Read the metro again from the downloads on disk and rewrite a built map's metro.json; draws nothing"
+usage = 'arg "[area]" default="bbmp"'
+run = "uv run bengaluru metro --area ${usage_area}"
+
 [tasks.night]
 description = "Fetch, prepare, and build bbmp and then central, or the one area named, inside the 23:00 to 04:00 window; does nothing outside it"
 usage = 'arg "[area]" default=""'
