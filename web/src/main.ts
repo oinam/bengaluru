@@ -1,4 +1,6 @@
 import OpenSeadragon from "openseadragon";
+import { startBloom, type Layers } from "./bloom";
+import { startNight } from "./daylight";
 import { startLabels, type Place } from "./labels";
 import { startMetro } from "./metro";
 import { startPanel } from "./panel";
@@ -94,6 +96,8 @@ const viewer = OpenSeadragon({
   animationTime: 0.6,
   springStiffness: 9,
   background: "#1f2a2e",
+  // The blossom lies over the map as a second picture of the same size, so places are the same.
+  silenceMultiImageWarnings: true,
 } as OpenSeadragon.Options);
 
 function imageZoomToViewport(zoom: number): number {
@@ -181,6 +185,9 @@ let still: HTMLCanvasElement | null = null;
 let water: ReturnType<typeof startWater> | null = null;
 let rivers: ReturnType<typeof startRivers> | null = null;
 let metro: ReturnType<typeof startMetro> | null = null;
+let layerKey: Layers | null = null;
+let bloom: ReturnType<typeof startBloom> | null = null;
+let night: ReturnType<typeof startNight> | null = null;
 let marker: HTMLElement | null = null;
 let labels: ReturnType<typeof startLabels> | null = null;
 
@@ -285,7 +292,11 @@ viewer.addHandler("open", () => {
     viewer.addHandler("animation-finish", updateCorrectionLink);
     viewer.addHandler("animation", updateTilt);
     viewer.addHandler("animation", updateSmoothing);
+    night = startNight(viewer, byId("light", HTMLSelectElement));
+    bloom = layerKey && startBloom(viewer, byId("bloom", HTMLSelectElement), layerKey);
   }
+  night?.refresh(viewData(currentView), areaName);
+  bloom?.refresh(viewData(currentView), areaName);
 });
 
 window.addEventListener("hashchange", () => {
@@ -396,8 +407,9 @@ let places: Place[] = [];
 
 fetch(MANIFEST, { cache: "no-cache" })
   .then((response) => response.json())
-  .then((manifest: Frame & { area?: string; views: Record<string, View> }) => {
+  .then((manifest: Frame & { area?: string; layers?: Layers; views: Record<string, View> }) => {
     views = manifest.views;
+    layerKey = manifest.layers ?? null;
     const { matrix, x_offset, y_offset } = manifest;
     indexFrame = { matrix, x_offset, y_offset };
     areaName = manifest.area ?? areaName;

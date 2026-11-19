@@ -141,6 +141,11 @@
             Water and other animation, and the metro lines, can be turned off in Settings (⚙).
           </li>
           <li>
+            The map keeps Bengaluru's hours and seasons: it darkens at dusk and lights its windows
+            and street lamps, and its trees flower in their months. Settings (⚙) can hold it at day
+            or night, or show another month.
+          </li>
+          <li>
             A metro line is solid where trains run, dashed where it is being built, and dotted where
             it is only proposed. Solid and dashed lines are faint underground.
           </li>
@@ -151,6 +156,18 @@
 
     <div id="settings-panel" class="panel settings" hidden>
       <label><input id="animation" type="checkbox" /> Animation</label>
+      <label class="choice"
+        >Light
+        <select id="light">
+          <option value="">By Bengaluru's clock</option>
+          <option value="day">Day</option>
+          <option value="night">Night</option>
+        </select></label
+      >
+      <label class="choice" hidden
+        >Trees in flower
+        <select id="bloom"></select
+      ></label>
       <div class="metro-setting" hidden>
         <label><input id="metro" type="checkbox" /> Metro lines</label>
         <ul class="metro-key">
@@ -181,7 +198,7 @@
           <p>
             Rendered map <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
             Drawn by code from open data; no photographs are used. Tree positions, blossoms, roof
-            types, and windows are illustrative.
+            types, windows, and the night's lights are illustrative.
           </p>
           <ul>
             <li>

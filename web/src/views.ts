@@ -9,6 +9,10 @@ export interface Frame {
 
 export interface View extends Frame {
   pyramid: string;
+  // Pictures the size of the map, laid over it: the trees in flower, and the night's lights.
+  // A map built before it had them names neither.
+  bloom?: string;
+  lights?: string;
 }
 
 // The view whose screen-up is true north; the site opens in it, and a link without a view
