@@ -725,3 +725,20 @@ Seen on the test patch (`out/vidhana-soudha/20261120-071837_night-pooled-lights-
 and previewed for the whole city from the tiles on disk
 (`out/bbmp/20261120-071837_night-far-lights-pooled-preview.jpg`, beside the two
 it replaces; the preview clips to white where the build keeps the light's color).
+
+## 2026-11-20 — A picture for the link, where it is shared
+
+A link to the site showed no picture on social media: the page named a title and a
+description but no image, and those sites draw nothing of their own.
+
+- **What is built.** `web/public/share.jpg`, 1,200 by 630, which the page's head now
+  names with its full address, its size, and a line of alt text, beside the address of
+  the page and the card X asks for (`summary_large_image`). The about page names the
+  same picture.
+- **The picture** is the map itself: the opening view by day, one level out from full
+  size, centered on Vidhana Soudha, so the High Court and Cubbon Park are in it.
+  `tools/share_image.py` cuts it from the finished tiles, so it is made again by one
+  command after a redraw. No words are drawn on it; each site sets the title beside it.
+- **His to change:** the place, and how far out (`[lon lat] [halvings]`).
+- A site that has already read the link keeps what it read for days. Facebook,
+  LinkedIn, and X each have a page that reads a link again when asked.

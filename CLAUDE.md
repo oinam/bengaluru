@@ -92,6 +92,7 @@ uv run python tools/four_views.py [area]        # lays the four built views side
 uv run python tools/crop.py central lalbagh 77.58691 12.94886 [view] [px]   # one frame of a built area centered on a place, into out/<area>/
 uv run python tools/look_options.py central 77.5790 12.9865   # one place in several candidate looks, side by side, for Brajeshwar to choose from; changes nothing
 uv run python tools/colorblind.py [area] [lon lat]   # one frame as the three kinds of color blindness see it, and the colors that merge; changes nothing
+uv run python tools/share_image.py [area] [lon lat] [halvings]   # cuts web/public/share.jpg, the picture social media shows beside a link, from the built tiles
 mise run night [area]                           # the night's work: fetch, prepare, and build bbmp then central, or the one area, inside 23:00 to 04:00; nothing outside it
 uv run bengaluru night --area vidhana-soudha --window 14:00-14:05   # the same with another window, for testing
 mise run dev [area]                             # serves the viewer at http://localhost:8655 on out/<area>/tiles; bbmp, the whole city, by default
