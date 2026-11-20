@@ -30,8 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from bengaluru.areas import get_area
-from bengaluru.detail import frames_fingerprint
-from bengaluru.tile import pyramids_of
+from bengaluru.tile import build_inputs, pyramids_of
 
 BUCKET = "bengaluru-tiles"
 ACCOUNT_ID = "091e65b116deac24fcc274459b6fbde0"
@@ -123,8 +122,8 @@ def main() -> None:
     stop = deadline()  # before touching the drive, so a slow first read can't move it a day
     env = rclone_env()
     done = set(json.loads(DONE.read_text())) if DONE.exists() else set()
-    # A view drawn from older data or drawing code is due to be drawn again; skip it.
-    inputs = frames_fingerprint(get_area(AREA))
+    # A view from older data, drawing code, or tiling is due to be built again; skip it.
+    inputs = build_inputs(get_area(AREA))
     views = json.loads(VIEWS_RECORD.read_text())
     finished = pyramids_of(
         {name: view for name, view in views.items() if view.get("inputs") == inputs}

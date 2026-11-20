@@ -1,13 +1,18 @@
 import geopandas as gpd
+import numpy as np
+import pyvips
 from shapely.geometry import LineString, Point
 
 from bengaluru.areas import Area
 from bengaluru.detail import PROJECTION
-from bengaluru.palettes import BLOSSOM
+from bengaluru.palettes import BLOSSOM, LIGHTS
 from bengaluru.prepare import METRIC_CRS, derived_path, metro_path
 from bengaluru.tile import (
+    LAYER_TILE_PX,
     _drop_old_pyramids,
+    _save_lights,
     flow_lines,
+    halved_lights,
     layer_key,
     metro_index,
     pyramid_version,
@@ -156,4 +161,68 @@ def test_the_layer_key_tells_each_flowering_tree_by_its_colors_and_months():
 def test_a_layer_has_its_own_pyramid_version(tmp_path):
     frame = tmp_path / "000_000.png"
     frame.write_bytes(b"same")
-    assert pyramid_version([frame], 1) != pyramid_version([frame], 1, 1024, ":bloom:mean")
+    assert pyramid_version([frame], 1) != pyramid_version([frame], 1, 1024, ":bloom")
+
+
+WINDOW = tuple(bytes.fromhex(LIGHTS["window"].lstrip("#")))
+
+
+def lit(height: int, width: int, windows: list[tuple[int, int]]) -> np.ndarray:
+    """A black picture with a lit window, two pixels square, at each row and column given."""
+    picture = np.zeros((height, width, 3), dtype=np.uint8)
+    for row, column in windows:
+        picture[row : row + 2, column : column + 2] = WINDOW
+    return picture
+
+
+def test_a_lone_window_fades_as_the_lights_halve_and_keeps_its_color():
+    once = halved_lights(pyvips.Image.new_from_array(lit(8, 8, [(2, 4)])))
+    twice = halved_lights(once)
+    assert (once.width, once.height) == (4, 4)
+    # Four lit pixels to one: twice their mean is past a full light, and held to one.
+    assert tuple(once.numpy()[1, 2]) == WINDOW
+    assert tuple(twice.numpy()[0, 1]) == tuple(round(value / 2) for value in WINDOW)
+    assert once.numpy().sum() == sum(WINDOW)
+
+
+def test_lights_built_close_together_stay_bright_from_afar():
+    def from_afar(windows: list[tuple[int, int]]) -> int:
+        lights = pyvips.Image.new_from_array(lit(8, 8, windows))
+        for _ in range(3):
+            lights = halved_lights(lights)
+        return int(lights.numpy()[0, 0].max())
+
+    crowded = [(row, column) for row in (0, 4) for column in (0, 4)]
+    assert from_afar(crowded) == 255
+    assert from_afar([(0, 0)]) < 80
+
+
+def test_an_odd_picture_of_lights_halves_to_the_size_a_pyramid_expects():
+    half = halved_lights(pyvips.Image.new_from_array(lit(5, 7, [(3, 5)])))
+    assert (half.width, half.height) == (4, 3)
+    assert half.numpy()[1:, 2:].any()
+
+
+def test_the_lights_pyramid_has_every_level_down_to_one_pixel(tmp_path):
+    frames = []
+    for index, windows in enumerate(([(10, 10)], [(600, 300)])):
+        frame = tmp_path / f"000_{index:03d}.png"
+        pyvips.Image.new_from_array(lit(LAYER_TILE_PX, LAYER_TILE_PX, windows)).write_to_file(
+            str(frame)
+        )
+        frames.append(frame)
+    pyramid = tmp_path / "pyramid" / "area"
+    pyramid.parent.mkdir()
+    full = _save_lights(frames, 2, pyramid)
+    assert (full.width, full.height) == (2 * LAYER_TILE_PX, LAYER_TILE_PX)
+    files = pyramid.parent / "area_files"
+    assert sorted(path.name for path in pyramid.parent.iterdir()) == ["area.dzi", "area_files"]
+    assert 'Width="2048"' in pyramid.with_suffix(".dzi").read_text()
+    assert sorted(int(level.name) for level in files.iterdir()) == list(range(12))
+    assert sorted(path.name for path in (files / "11").iterdir()) == ["0_0.webp", "1_0.webp"]
+    top = pyvips.Image.new_from_file(str(files / "11" / "1_0.webp"))
+    assert tuple(top.numpy()[600, 300][:3]) == WINDOW
+    half = pyvips.Image.new_from_file(str(files / "10" / "0_0.webp"))
+    assert tuple(half.numpy()[5, 5][:3]) == WINDOW
+    one = pyvips.Image.new_from_file(str(files / "0" / "0_0.webp"))
+    assert (one.width, one.height) == (1, 1)

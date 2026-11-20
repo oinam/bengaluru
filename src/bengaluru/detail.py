@@ -126,8 +126,8 @@ BY_DAY = {
 }
 # A frame is kept as the map every hour and season shares, and as these, each a picture of
 # the same size holding only its own pixels, for the viewer to lay over the map. The bloom
-# is clear elsewhere. The lights are black elsewhere, to be added as light is: only in a
-# picture with no clear part does the tiler keep the brightest pixel as it shrinks one.
+# is clear elsewhere. The lights are black elsewhere, to be added as light is, and so the
+# tiler can pool them as it shrinks them, which a clear part would spoil.
 LAYERS = ("bloom", "lights")
 CLEAR_LAYERS = ("bloom",)
 # Of a hundred windows, how many have someone home at night.

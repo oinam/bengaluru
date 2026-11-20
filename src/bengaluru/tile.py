@@ -45,11 +45,18 @@ TILE_SUFFIX = ".webp[lossless=true,effort=4]"
 PYRAMID_DIR = "pyramid"
 # A layer is mostly clear, so its tiles are larger: a quarter as many files to keep and send.
 LAYER_TILE_PX = 1024
-# How a layer's pixels shrink into the pyramid's smaller levels. Blossom thins out as the
-# trees it sits on do. A light does not: the brightest pixel is kept, so a lamp too small
-# to see still shows, and the city seen from afar glows where it is built. The viewer
-# dims that glow as it grows.
-LAYER_SHRINK = {"bloom": "mean", "lights": "max"}
+# Blossom shrinks into the pyramid's smaller levels as the map does, by the mean, and thins
+# out as the trees it sits on do. Lights are pooled: each time they halve, a pixel keeps this
+# many times the mean of the four it stands for, up to a full light. At 1, the mean, a window
+# is gone in two halvings and the far city is dark; at 4, the brightest pixel, every window
+# stays whole and the far city is one flat sheet. In between a lone window fades slowly, and
+# from afar the city glows brightest where it is built densest.
+LIGHTS_KEPT = 2.0
+# What decides the tiles besides the frames; a view tiled another way is built again.
+TILING = f"{TILE_PX}:{TILE_SUFFIX}:{LAYER_TILE_PX}:{LIGHTS_KEPT}"
+# A level of the lights this small is held in memory, and the smaller ones made from it;
+# a larger one is read from the frames again.
+HELD_BYTES = 1 << 30
 # What a view's entry names its pyramids by: the map, then each layer.
 PYRAMID_KEYS = ("pyramid", *LAYERS)
 VIEWS_RECORD = "views.json"
@@ -213,6 +220,58 @@ def landmark_credits() -> list[dict]:
     return sorted(entries.values(), key=lambda credit: credit["name"])
 
 
+def _joined(paths: list[Path], columns: int) -> pyvips.Image:
+    images = [pyvips.Image.new_from_file(str(path), access="sequential") for path in paths]
+    return pyvips.Image.arrayjoin(images, across=columns)
+
+
+def halved_lights(lights: pyvips.Image) -> pyvips.Image:
+    """Return a picture of lights at half its size, each pixel LIGHTS_KEPT times the mean of
+    the four it stands for. A pixel past a full light is held to one, in its own color.
+    """
+    even = lights.embed(0, 0, lights.width + lights.width % 2, lights.height + lights.height % 2)
+    pooled = even.cast("float").shrink(2, 2) * LIGHTS_KEPT
+    first, *rest = pooled.bandsplit()
+    peak = first.bandrank(rest, index=len(rest))
+    held = (peak > 255).ifthenelse(pooled * 255 / peak, pooled)
+    return held.rint().cast("uchar").copy(interpretation="srgb")
+
+
+def _save_lights(paths: list[Path], columns: int, pyramid: Path) -> pyvips.Image:
+    """Write the lights' pyramid a level at a time, since libvips shrinks a pyramid only by
+    the mean or the brightest pixel, and return the picture at full size.
+    """
+    full = _joined(paths, columns)
+    top = (max(full.width, full.height) - 1).bit_length()
+    image, held = full, False
+    for halvings in range(top + 1):
+        if held:
+            # Each level is worked out before the next is made from it: left as one long
+            # chain of halvings, libvips overruns its stack when it lets the chain go.
+            image = halved_lights(image).copy_memory()
+        elif halvings:
+            image = _joined(paths, columns)
+            for _ in range(halvings):
+                image = halved_lights(image)
+            if image.width * image.height * image.bands <= HELD_BYTES:
+                image, held = image.copy_memory(), True
+        scratch = pyramid.with_name("level")
+        image.dzsave(
+            str(scratch), tile_size=LAYER_TILE_PX, overlap=0, suffix=TILE_SUFFIX, depth="one"
+        )
+        # A pyramid of one level names it 0, whatever its place in this one.
+        files = Path(f"{pyramid}_files")
+        files.mkdir(exist_ok=True)
+        shutil.move(f"{scratch}_files/0", files / str(top - halvings))
+        shutil.rmtree(f"{scratch}_files")
+        index = scratch.with_suffix(".dzi")
+        if halvings:
+            index.unlink()
+        else:
+            index.rename(pyramid.with_suffix(".dzi"))
+    return full
+
+
 def _build_pyramid(
     area: Area, view: str, target: Path, manifest: dict, layer: str | None = None
 ) -> str:
@@ -223,25 +282,27 @@ def _build_pyramid(
         for row in range(rows)
         for column in range(columns)
     ]
-    tile_px, shrink = TILE_PX, "mean"
+    tile_px = TILE_PX
     if layer:
         paths = [layer_path(path, layer) for path in paths]
-        tile_px, shrink = LAYER_TILE_PX, LAYER_SHRINK[layer]
-    images = [pyvips.Image.new_from_file(str(path), access="sequential") for path in paths]
-    joined = pyvips.Image.arrayjoin(images, across=columns)
-    version = pyramid_version(paths, columns, tile_px, f":{layer}:{shrink}" if layer else "")
+        tile_px = LAYER_TILE_PX
+    pooled = f":{LIGHTS_KEPT}" if layer == "lights" else ""
+    version = pyramid_version(paths, columns, tile_px, f":{layer}{pooled}" if layer else "")
     pyramid = target / PYRAMID_DIR / version
     # A build stopped partway through leaves an unfinished pyramid; start it again.
     shutil.rmtree(pyramid, ignore_errors=True)
     pyramid.mkdir(parents=True)
-    joined.dzsave(
-        str(pyramid / area.name),
-        tile_size=tile_px,
-        overlap=0,
-        suffix=TILE_SUFFIX,
-        depth="onepixel",
-        region_shrink=shrink,
-    )
+    if layer == "lights":
+        joined = _save_lights(paths, columns, pyramid / area.name)
+    else:
+        joined = _joined(paths, columns)
+        joined.dzsave(
+            str(pyramid / area.name),
+            tile_size=tile_px,
+            overlap=0,
+            suffix=TILE_SUFFIX,
+            depth="onepixel",
+        )
     print(f"{view} {layer or 'map'} {pyramid}: {joined.width} x {joined.height}")
     return version
 
@@ -328,6 +389,13 @@ def _drop_old_pyramids(target: Path, views: dict) -> None:
             shutil.rmtree(pyramid)
 
 
+def build_inputs(area: Area) -> str:
+    """Return what decides a view's tiles: what its frames are drawn from, and how they are
+    tiled. A built view that records anything else is stale.
+    """
+    return f"{frames_fingerprint(area)}:{TILING}"
+
+
 def _past(deadline: float | None) -> bool:
     return deadline is not None and time.time() >= deadline
 
@@ -338,14 +406,14 @@ def build(area: Area, only: list[str] | None = None, deadline: float | None = No
 
     Stopped, it picks up at the first frame that is not on disk. Past the deadline, an epoch
     time, no frame and no pyramid starts; a pyramid already being written is finished. A
-    view built from other data or an older renderer is built again, and until then the
-    viewer keeps showing the one it has.
+    view built from other data, by an older renderer, or tiled another way is built again,
+    and until then the viewer keeps showing the one it has.
     """
     target = tiles_dir(area)
     target.mkdir(parents=True, exist_ok=True)
     record = target / VIEWS_RECORD
     views = json.loads(record.read_text()) if record.exists() else {}
-    inputs = frames_fingerprint(area)
+    inputs = build_inputs(area)
     scene = None
     for view in only or RENDERED_VIEWS:
         if views.get(view, {}).get("inputs") == inputs:
