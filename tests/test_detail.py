@@ -19,6 +19,7 @@ from bengaluru.detail import (
     TRANSPARENT,
     VIEWS,
     _blossoms,
+    _drawn_depth,
     _paint_flat,
     _paint_low_house,
     _paint_pitched,
@@ -122,6 +123,56 @@ def test_track_and_viaduct_join_without_a_seam():
     joined = np.hstack([render_frame(scene, canvas, 0, 0), render_frame(scene, canvas, 1, 0)])
     assert np.array_equal(joined, whole)
     assert not np.array_equal(whole, render_detail(build_scene(sample_layers()), canvas))
+
+
+def flyover(points, heights, road_class="trunk", width=14.0):
+    line = shapely.LineString([(x, y, z) for (x, y), z in zip(points, heights, strict=True)])
+    return {"road_class": road_class, "width_m": width, "geometry": line}
+
+
+def deck_points(start, end, count):
+    return np.linspace(start, end, count).tolist()
+
+
+def test_a_flyover_stands_over_the_ground_and_joins_without_a_seam():
+    layers = sample_layers()
+    road = shapely.LineString([(0, 150), (300, 150)])
+    roads = gpd.GeoDataFrame(
+        {"width_m": [14.0], "road_class": ["trunk"], "raised": [True]}, geometry=[road], crs=32643
+    )
+    points = deck_points((0, 150), (300, 150), 39)
+    heights = np.minimum(6.5, np.minimum(np.arange(39), np.arange(39)[::-1]) * 0.8)
+    decks = gpd.GeoDataFrame([flyover(points, heights)], crs=32643)
+    scene = build_scene(replace(layers, roads=roads), flyovers=decks)
+    assert len(scene.decks) > 10
+    assert scene.decks[0].on_wall
+    assert not scene.decks[len(scene.decks) // 2].on_wall
+    width = 2 * FRAME_PX
+    canvas = centered_viewport(PROJECTION_B, 150, 150, width, FRAME_PX)
+    whole = render_detail(scene, canvas)
+    joined = np.hstack([render_frame(scene, canvas, 0, 0), render_frame(scene, canvas, 1, 0)])
+    assert np.array_equal(joined, whole)
+    # The road is drawn on the deck, and without the deck not at all: never on the ground.
+    bare = render_detail(build_scene(replace(layers, roads=roads)), canvas)
+    assert (whole == DETAIL_SLOT["road_line"]).any()
+    assert (whole == DETAIL_SLOT["lamp_deck"]).any()
+    assert not (bare == DETAIL_SLOT["road_line"]).any()
+
+
+def test_a_span_that_crosses_over_a_lower_one_is_drawn_after_it():
+    low = flyover(deck_points((0, 150), (300, 150), 39), [6.5] * 39)
+    high = flyover(deck_points((150, 0), (150, 300), 39), [11.5] * 39, "primary", 12.0)
+    scene = build_scene(sample_layers(), flyovers=gpd.GeoDataFrame([low, high], crs=32643))
+    assert scene.under
+    for upper, lowers in scene.under.items():
+        assert scene.aloft[upper, 2] == 11.5
+        for lower in lowers:
+            assert scene.aloft[lower, 2] == 6.5
+            assert _drawn_depth(scene, upper) < _drawn_depth(scene, lower)
+    # Away from the crossing a span keeps its own depth.
+    far = len(scene.decks) - 1
+    assert far not in scene.under
+    assert _drawn_depth(scene, far) == PROJECTION_B.depth(*scene.aloft[far, :2])
 
 
 def test_default_view_keeps_its_paths():
@@ -245,3 +296,4 @@ def test_night_lights_do_not_show_by_day():
     assert colors["window_glow"] == colors["road_major"]
     assert colors["lamp"] == colors["road_track"]
     assert colors["lamp_shade"] == colors["shadow_built"]
+    assert colors["lamp_deck"] == colors["wall_lit"]

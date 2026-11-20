@@ -2,12 +2,14 @@
 
 import datetime as dt
 import hashlib
+import itertools
 import json
 import math
 import multiprocessing
 import shutil
 import time
 import zlib
+from collections import defaultdict
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -77,6 +79,7 @@ _EXTRA = (
     "window_glow_shade",
     "lamp",
     "lamp_shade",
+    "lamp_deck",
 )
 DETAIL_SLOT = {**SLOT, **{name: len(SLOTS) + index for index, name in enumerate(_EXTRA)}}
 
@@ -111,18 +114,21 @@ SHADOW = {
     "lamp": "lamp_shade",
 }
 # What shines at night, by the light it shines with. By day each is the color of what it
-# stands on: a window on a sunlit wall or a shaded one, a lamp on a footpath in sun or shade.
+# stands on: a window on a sunlit wall or a shaded one, a lamp on a footpath in sun or shade
+# or on a flyover's parapet.
 GLOW = {
     "window_glow": "window",
     "window_glow_shade": "window",
     "lamp": "lamp",
     "lamp_shade": "lamp",
+    "lamp_deck": "lamp",
 }
 BY_DAY = {
     "window_glow": "road_major",
     "window_glow_shade": "background",
     "lamp": "road_track",
     "lamp_shade": "shadow_built",
+    "lamp_deck": "wall_lit",
 }
 # A frame is kept as the map every hour and season shares, and as these, each a picture of
 # the same size holding only its own pixels, for the viewer to lay over the map. The bloom
@@ -178,6 +184,19 @@ VIADUCT_M = 9.0
 VIADUCT_DECK_M = 1.8
 VIADUCT_HALF_M = 2.6
 VIADUCT_SPAN_M = 24.0
+# A road's flyover: the depth of its deck, the height of its parapets, the distance between
+# its piers, and the clear height under which a span stands on a wall, as a ramp does, and
+# not on piers. A deck this wide or wider stands on two columns, each this far in from an
+# edge, where they show from the side; a narrower one stands on one.
+FLYOVER_DECK_M = 1.5
+FLYOVER_PARAPET_M = 1.0
+FLYOVER_SPAN_M = 24.0
+FLYOVER_WALL_M = 3.0
+FLYOVER_TWIN_M = 10.0
+FLYOVER_COLUMN_IN_M = 1.5
+# Two decks within this height of each other, where they overlap, are one stretch of road:
+# carriageways side by side, or a ramp joining. No parapet stands between them.
+FLYOVER_BESIDE_M = 2.5
 LANDMARK_CLEARING_M = 16.0
 CEMETERY_ROW_M = 5.5
 CEMETERY_GRAVE_M = 4.0
@@ -390,6 +409,9 @@ def _dashes(line: LineString, on_m: float = 4.0, off_m: float = 6.0) -> list:
 def _paint_roads(canvas: np.ndarray, layers: Layers, view: Viewport) -> None:
     roads = layers.roads.explode(index_parts=False)
     roads = roads[roads.geometry.geom_type == "LineString"]
+    if "raised" in roads:
+        # A flyover's road is its deck, drawn among the buildings.
+        roads = roads[~roads.raised.astype(bool)]
     major = roads[roads.road_class.isin(MAJOR_ROADS)]
     walks = major.geometry.buffer(major.width_m / 2 + FOOTPATH_M, cap_style="flat")
     walk_mask = _burn([(g.intersection(layers.patch), 1) for g in walks], view).astype(bool)
@@ -797,6 +819,80 @@ def _paint_span(draw, view, piece: LineString, deck) -> None:
     draw.line(track, fill=DETAIL_SLOT["road_major"])
 
 
+@dataclass(frozen=True)
+class Deck:
+    """One span of a flyover. The center line and the two edges have a row for each point
+    along the span; the center's rows are x, y, the deck's height there, and the distance
+    along the whole flyover. Each edge has a parapet where it is open."""
+
+    center: np.ndarray
+    left: np.ndarray
+    right: np.ndarray
+    road_class: str
+    width_m: float
+    footprint: shapely.Polygon
+    left_open: np.ndarray
+    right_open: np.ndarray
+
+    @property
+    def middle(self) -> np.ndarray:
+        return self.center[len(self.center) // 2]
+
+    @property
+    def on_wall(self) -> bool:
+        """Tell a span too low to pass under, which stands on a wall and not on a pier."""
+        return self.middle[2] - FLYOVER_DECK_M < FLYOVER_WALL_M
+
+
+def _paint_deck(draw, view, deck: Deck) -> None:
+    """Draw one span of a flyover: its columns or its walls, the sides of its deck, the
+    road, its lane line, and its parapets."""
+    x, y, top, along = deck.center.T
+    under = np.zeros_like(top) if deck.on_wall else top - FLYOVER_DECK_M
+    lit, shade = DETAIL_SLOT["wall_lit"], DETAIL_SLOT["wall_shade"]
+    if not deck.on_wall:
+        at = len(top) // 2
+        middle = deck.center[at, :2]
+        twin = deck.width_m >= FLYOVER_TWIN_M
+        out = 1 - FLYOVER_COLUMN_IN_M / (deck.width_m / 2) if twin else 0.0
+        for edge in (deck.left, deck.right) if twin else (deck.left,):
+            stands = middle + (edge[at] - middle) * out
+            column, foot = _project(view, *stands, 0)
+            _, head = _project(view, *stands, under[at])
+            draw.rectangle([column - 1, head, column + 1, foot], fill=shade)
+            draw.line([(column - 1, head), (column - 1, foot)], fill=lit)
+
+    def lifted(edge: np.ndarray, heights: np.ndarray) -> list[tuple[int, int]]:
+        return [_project(view, *point, z) for point, z in zip(edge, heights, strict=True)]
+
+    left, right = lifted(deck.left, top), lifted(deck.right, top)
+    for edge, above in ((deck.left, left), (deck.right, right)):
+        draw.polygon(above + lifted(edge, under)[::-1], fill=shade)
+    road = ROAD_SLOTS.get(deck.road_class, "road_minor")
+    draw.polygon(left + right[::-1], fill=DETAIL_SLOT[road])
+    if deck.road_class in LINED_ROADS:
+        # In step with the dashes of a road on the ground.
+        for start in np.arange(math.ceil(along[0] / 10.0) * 10.0, along[-1], 10.0):
+            ends = (start, min(start + 4.0, along[-1]))
+            dash = [
+                _project(view, *(np.interp(at, along, values) for values in (x, y, top)))
+                for at in ends
+            ]
+            draw.line(dash, fill=DETAIL_SLOT["road_line"])
+    sides = ((deck.left, left, deck.left_open), (deck.right, right, deck.right_open))
+    for edge, below, stands in sides:
+        above = lifted(edge, top + FLYOVER_PARAPET_M)
+        for at in np.flatnonzero(stands[:-1] & stands[1:]):
+            piece = [below[at], below[at + 1], above[at + 1], above[at]]
+            draw.polygon(piece, fill=lit)
+    # A lamp on the parapet of each span, on alternate sides, as on the footpaths below.
+    at = len(top) // 2
+    edge, _, stands = sides[int(along[at] // FLYOVER_SPAN_M) % 2]
+    if road == "road_major" and stands[at]:
+        lamp_x, lamp_y = _project(view, *edge[at], top[at] + FLYOVER_PARAPET_M)
+        draw.rectangle([lamp_x, lamp_y - 1, lamp_x + 1, lamp_y], fill=DETAIL_SLOT["lamp_deck"])
+
+
 def _tree_sprite(
     radius: int, seed: int, blossom: str | None = None
 ) -> tuple[Image.Image, Image.Image, int]:
@@ -916,6 +1012,12 @@ class Scene:
     # Track on the ground, and the viaducts cut into spans of (track, deck).
     rails: gpd.GeoDataFrame
     spans: list[tuple[LineString, shapely.Polygon]]
+    # The flyovers, cut into spans.
+    decks: list[Deck]
+    # Every raised span, the viaducts' and then the flyovers': the x, y, and height of its
+    # middle, and for a span that crosses over lower ones, their numbers.
+    aloft: np.ndarray
+    under: dict[int, list[int]]
     # The derived data to read each frame's buildings from, when they are not held in memory.
     buildings_from: Path | None = None
 
@@ -926,6 +1028,91 @@ def empty_surfaces() -> gpd.GeoDataFrame:
 
 def empty_rails() -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame({"rail": [], "elevated": []}, geometry=[], crs=METRIC_CRS)
+
+
+def empty_flyovers() -> gpd.GeoDataFrame:
+    return gpd.GeoDataFrame({"road_class": [], "width_m": []}, geometry=[], crs=METRIC_CRS)
+
+
+def flyover_decks(flyovers: gpd.GeoDataFrame, patch) -> list[Deck]:
+    """Cut each flyover into spans, each drawn at its own depth among the buildings.
+
+    The edges are worked out along the whole flyover, so two spans meet edge to edge
+    around a bend. A span whose middle is outside the patch is left out.
+    """
+    spans = []
+    for number, row in enumerate(flyovers.itertuples()):
+        points = shapely.get_coordinates(row.geometry, include_z=True)
+        xy = points[:, :2]
+        steps = np.diff(xy, axis=0)
+        lengths = np.hypot(*steps.T)
+        if len(xy) < 2 or not lengths.all():
+            continue
+        heading = steps / lengths[:, None]
+        # Each point's edges are set off across the mean of the headings into and out of
+        # it, and farther at a bend, so the deck keeps its width.
+        before, after = np.vstack([heading[:1], heading]), np.vstack([heading, heading[-1:]])
+        mean = before + after
+        size = np.hypot(*mean.T)[:, None]
+        mean = np.where(size > 1e-6, mean / np.maximum(size, 1e-6), after)
+        reach = row.width_m / 2 / np.maximum((mean * after).sum(axis=1), 0.5)
+        across = np.column_stack([-mean[:, 1], mean[:, 0]]) * reach[:, None]
+        along = np.concatenate([[0.0], np.cumsum(lengths)])
+        center = np.column_stack([points, along])
+        ends = np.arange(FLYOVER_SPAN_M, along[-1] - FLYOVER_SPAN_M / 2, FLYOVER_SPAN_M)
+        bounds = np.unique([0, *np.searchsorted(along, ends), len(xy) - 1])
+        for first, last in itertools.pairwise(bounds):
+            part = slice(first, last + 1)
+            if not shapely.contains_xy(patch, *xy[(first + last) // 2]):
+                continue
+            footprint = LineString(xy[part]).buffer(row.width_m / 2, cap_style="flat")
+            edges = (xy + across)[part], (xy - across)[part]
+            spans.append((number, center[part], *edges, row.road_class, row.width_m, footprint))
+    parapets = _open_edges(spans)
+    return [Deck(*span[1:], *stands) for span, stands in zip(spans, parapets, strict=True)]
+
+
+def _open_edges(spans: list[tuple]) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Tell, for each span, where along its left edge and its right a parapet stands:
+    wherever the edge is not inside the deck of another flyover at about its own height."""
+    if not spans:
+        return []
+    flyover = np.array([span[0] for span in spans])
+    height = np.array([span[1][:, 2].mean() for span in spans])
+    counts = [len(span[1]) for span in spans]
+    owner = np.repeat(np.arange(len(spans)), counts)
+    inside = []
+    for side in (2, 3):
+        points = np.vstack([span[side] for span in spans])
+        at = np.concatenate([span[1][:, 2] for span in spans])
+        tree = shapely.STRtree([span[6] for span in spans])
+        point, other = tree.query(shapely.points(points), predicate="within")
+        beside = (flyover[other] != flyover[owner[point]]) & (
+            np.abs(height[other] - at[point]) < FLYOVER_BESIDE_M
+        )
+        covered = np.zeros(len(points), dtype=bool)
+        covered[point[beside]] = True
+        inside.append(np.split(~covered, np.cumsum(counts)[:-1]))
+    return list(zip(*inside, strict=True))
+
+
+def _crossings(footprints: list, heights: np.ndarray) -> dict[int, list[int]]:
+    """Return, for each raised span that crosses over lower ones, the lower ones' numbers.
+
+    One span is over another where their footprints share ground and it clears the other
+    by a deck's depth; two spans side by side at one height are neither over the other.
+    """
+    if not footprints:
+        return {}
+    shapes = np.array(footprints, dtype=object)
+    upper, lower = shapely.STRtree(shapes).query(shapes, predicate="intersects")
+    clear = heights[upper] - heights[lower] >= FLYOVER_DECK_M
+    upper, lower = upper[clear], lower[clear]
+    shared = shapely.area(shapely.intersection(shapes[upper], shapes[lower])) > 1.0
+    under = defaultdict(list)
+    for high, low in zip(upper[shared], lower[shared], strict=True):
+        under[int(high)].append(int(low))
+    return dict(under)
 
 
 def viaduct_spans(rails: gpd.GeoDataFrame) -> list[tuple[LineString, shapely.Polygon]]:
@@ -994,6 +1181,7 @@ def build_scene(
     trees: np.ndarray | None = None,
     styles: dict[str, dict] | None = None,
     rails: gpd.GeoDataFrame | None = None,
+    flyovers: gpd.GeoDataFrame | None = None,
 ) -> Scene:
     tree_rows = tree_rows or []
     landmarks = landmarks or []
@@ -1029,13 +1217,38 @@ def build_scene(
     frames["rails"] = grounded
     indexes = {name: shapely.STRtree(frame.geometry.values) for name, frame in frames.items()}
     indexes["spans"] = shapely.STRtree([deck for _, deck in spans])
+    decks = flyover_decks(empty_flyovers() if flyovers is None else flyovers, layers.patch)
+    indexes["decks"] = shapely.STRtree([deck.footprint for deck in decks])
+    middles = [piece.interpolate(0.5, normalized=True) for piece, _ in spans]
+    aloft = np.array(
+        [
+            *((middle.x, middle.y, VIADUCT_M) for middle in middles),
+            *((*deck.middle[:2], deck.center[:, 2].mean()) for deck in decks),
+        ]
+    ).reshape(-1, 3)
+    footprints = [*(deck for _, deck in spans), *(deck.footprint for deck in decks)]
+    under = _crossings(footprints, aloft[:, 2])
     # Every shape in green first, then again in each blossom, in BLOSSOM's order.
     sprites = [
         _tree_sprite(RADIUS_PX[index % 6], seed + index, blossom)
         for blossom in (None, *BLOSSOM)
         for index in range(TREE_SHAPES)
     ]
-    return Scene(local, surfaces, trees, sprites, landmarks, seed, indexes, styles, grounded, spans)
+    return Scene(
+        local,
+        surfaces,
+        trees,
+        sprites,
+        landmarks,
+        seed,
+        indexes,
+        styles,
+        grounded,
+        spans,
+        decks,
+        aloft,
+        under,
+    )
 
 
 def _view_quad(view: Viewport) -> shapely.Polygon:
@@ -1094,7 +1307,7 @@ def _visible_landmarks(scene: Scene, view: Viewport) -> list[dict]:
 
 
 # What an item of the scene is, which picks its painter.
-BUILDING, TREE, LANDMARK, SPAN = range(4)
+BUILDING, TREE, LANDMARK, SPAN, DECK = range(5)
 
 
 def _add_buildings(items: list, shadows: list, scene: Scene, local: Layers) -> None:
@@ -1113,13 +1326,33 @@ def _add_buildings(items: list, shadows: list, scene: Scene, local: Layers) -> N
             items.append((-_depth(center.x, center.y), row.building_id, BUILDING, polygon, height))
 
 
+def _drawn_depth(scene: Scene, number: int) -> float:
+    """Return the depth a raised span is drawn at: its own, or just nearer than the lower
+    spans it crosses over, so that it is drawn after them."""
+    x, y, _ = scene.aloft[number]
+    lower = [_drawn_depth(scene, low) - 0.01 for low in scene.under.get(number, ())]
+    return min([_depth(x, y), *lower])
+
+
 def _add_spans(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) -> None:
     dx, dy = _sun_offset(VIADUCT_M * SHADOW_PER_HEIGHT)
     for index in np.unique(scene.indexes["spans"].query(quad, predicate="intersects")):
         piece, deck = scene.spans[index]
         shadows.append((shapely.affinity.translate(deck, dx, dy), 1))
-        center = piece.interpolate(0.5, normalized=True)
-        items.append((-_depth(center.x, center.y), f"span/{index:07d}", SPAN, piece, deck))
+        items.append((-_drawn_depth(scene, index), f"span/{index:07d}", SPAN, piece, deck))
+
+
+def _add_decks(items: list, shadows: list, scene: Scene, quad: shapely.Polygon) -> None:
+    for index in np.unique(scene.indexes["decks"].query(quad, predicate="intersects")):
+        deck = scene.decks[index]
+        dx, dy = _sun_offset(float(deck.center[:, 2].mean()) * SHADOW_PER_HEIGHT)
+        shadow = shapely.affinity.translate(deck.footprint, dx, dy)
+        if deck.on_wall:
+            # No light passes under a wall.
+            shadow = shapely.convex_hull(shapely.union(deck.footprint, shadow))
+        shadows.append((shadow, 1))
+        depth = _drawn_depth(scene, len(scene.spans) + index)
+        items.append((-depth, f"deck/{index:07d}", DECK, deck, None))
 
 
 def _blossoms(trees: np.ndarray, seed: int) -> np.ndarray:
@@ -1172,7 +1405,7 @@ def _darken_shadows(canvas: np.ndarray, shadows: list, view: Viewport) -> None:
 
 
 def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) -> None:
-    """Draw buildings, trees, and sprites from the back of the scene to the front."""
+    """Draw buildings, trees, spans, and sprites from the back of the scene to the front."""
     draw = ImageDraw.Draw(image)
     items.sort(key=lambda item: (item[0], item[1]))
     for _, label, kind, payload, extra in items:
@@ -1185,6 +1418,8 @@ def _paint_items(image: Image.Image, items: list, scene: Scene, view: Viewport) 
             image.paste(sprite, (x - sprite.width // 2, y - height + 1), sprite_mask)
         elif kind == SPAN:
             _paint_span(draw, view, payload, extra)
+        elif kind == DECK:
+            _paint_deck(draw, view, payload)
         else:
             art = payload["sprite"]
             x, y = _project(view, payload["x"], payload["y"], 0)
@@ -1216,6 +1451,7 @@ def render_detail(scene: Scene, view: Viewport) -> np.ndarray:
     shadows: list = []
     _add_buildings(items, shadows, scene, local)
     _add_spans(items, shadows, scene, quad)
+    _add_decks(items, shadows, scene, quad)
     _add_trees(items, shadows, scene, view)
     _add_landmarks(items, shadows, landmarks)
     _darken_shadows(canvas, shadows, view)
@@ -1287,6 +1523,7 @@ def _build_area_scene(area, layers, surfaces, landmarks, trees) -> Scene:
         trees=trees,
         styles=load_styles(),
         rails=_load_or(area, "rails", empty_rails),
+        flyovers=_load_or(area, "flyovers", empty_flyovers),
     )
 
 
