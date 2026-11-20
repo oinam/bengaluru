@@ -11,6 +11,7 @@ from bengaluru.prepare import (
     mostly_on_mask,
     osm_buildings,
     rails,
+    roads,
 )
 
 
@@ -81,6 +82,20 @@ def test_rails_keep_track_in_the_open_and_mark_viaducts():
     tracks = rails(features)
     assert tracks.rail.tolist() == ["rail", "rail", "subway"]
     assert tracks.elevated.tolist() == [False, False, True]
+
+
+def test_roads_carry_what_a_flyover_is_found_from():
+    line = LineString([(77.59, 12.97), (77.60, 12.97)])
+    features = [
+        Feature("way", 1, {"highway": "trunk_link", "bridge": "yes", "layer": "2"}, line),
+        Feature("way", 2, {"highway": "motorway", "bridge": "viaduct"}, line),
+        Feature("way", 3, {"highway": "residential", "bridge": "no"}, line),
+        Feature("way", 4, {"highway": "construction", "bridge": "yes"}, line),
+    ]
+    found = roads(features)
+    assert found.road_class.tolist() == ["trunk", "motorway", "residential"]
+    assert found.bridge.tolist() == [True, True, False]
+    assert found["layer"].tolist() == [2, 0, 0]
 
 
 def test_the_metro_takes_its_lines_from_the_routes_that_name_its_track():

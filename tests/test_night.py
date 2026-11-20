@@ -103,10 +103,10 @@ def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monk
     done: list[str] = []
     clock = iter(range(1, 100))
 
-    def stamp(path):
+    def stamp(path, text=""):
         """Write a file a second later than the last, as the real steps take time."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("")
+        path.write_text(text)
         tick = next(clock)
         os.utime(path, (tick, tick))
 
@@ -117,7 +117,7 @@ def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monk
 
     def prepare(area):
         done.append("prepare")
-        stamp(stats_path(area))
+        stamp(stats_path(area), json.dumps({"prepared_by": night.prepare_fingerprint()}))
 
     def build(_area, deadline):
         done.append("build")
@@ -135,3 +135,18 @@ def test_an_area_whose_bounds_moved_is_fetched_and_prepared_again(tmp_path, monk
     del done[:]
     assert night._work(after, later)
     assert done == ["fetch", "prepare", "build"]
+
+
+def test_an_area_prepared_by_older_code_is_prepared_again(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    area = Area("city", 12.0, 77.0, 13.0, 78.0)
+    (raw_dir(area)).mkdir(parents=True)
+    (raw_dir(area) / "SOURCES.txt").write_text("")
+    stats_path(area).parent.mkdir(parents=True)
+    stats_path(area).write_text(json.dumps({"prepared_by": night.prepare_fingerprint()}))
+    assert night._prepared(area)
+    stats_path(area).write_text(json.dumps({"prepared_by": "older"}))
+    assert not night._prepared(area)
+    # Data from before a fingerprint was kept.
+    stats_path(area).write_text(json.dumps({"buildings_final": 3}))
+    assert not night._prepared(area)

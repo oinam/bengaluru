@@ -28,7 +28,7 @@ PIXELS_PER_METER = 2.0
 FRAME_SIZE = 2048
 MARGIN_PX = 40
 LINE_WIDTH_M = 1.0
-LINED_ROADS = ("trunk", "primary")
+LINED_ROADS = ("motorway", "trunk", "primary")
 ROAD_ORDER = (
     "path",
     "footway",
@@ -44,6 +44,7 @@ ROAD_ORDER = (
     "secondary",
     "primary",
     "trunk",
+    "motorway",
 )
 ROAD_SLOTS = {
     "path": "road_track",
@@ -55,6 +56,7 @@ ROAD_SLOTS = {
     "secondary": "road_major",
     "primary": "road_major",
     "trunk": "road_major",
+    "motorway": "road_major",
 }
 # Swatch panels center between Vidhana Soudha and Cubbon Park: lawns, trees, roads, offices.
 SWATCH_CENTER = (77.5925, 12.9775)

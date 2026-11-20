@@ -2,6 +2,7 @@
 
 import datetime as dt
 import fcntl
+import json
 import subprocess
 import time
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import IO
 
 from bengaluru.areas import Area
 from bengaluru.fetch import fetch, fetched, raw_dir
-from bengaluru.prepare import prepare, stats_path
+from bengaluru.prepare import prepare, prepare_fingerprint, stats_path
 from bengaluru.tile import build
 
 NIGHT_WINDOW = "23:00-04:00"
@@ -114,15 +115,19 @@ def night(areas: list[Area], window: str = NIGHT_WINDOW) -> None:
 
 
 def _prepared(area: Area) -> bool:
-    """Return whether the derived data was made from the downloads now on disk."""
+    """Return whether the derived data was made from the downloads now on disk, by the code
+    that now prepares it."""
     stats, sources = stats_path(area), raw_dir(area) / "SOURCES.txt"
-    return stats.exists() and stats.stat().st_mtime >= sources.stat().st_mtime
+    if not stats.exists() or stats.stat().st_mtime < sources.stat().st_mtime:
+        return False
+    return json.loads(stats.read_text()).get("prepared_by") == prepare_fingerprint()
 
 
 def _work(area: Area, deadline: float) -> bool:
     """Carry one area as far as the deadline allows and return whether it is built."""
     # An area whose bounds have moved is fetched again, and what is fetched again is
-    # prepared again; the build then sees new data and draws every view again.
+    # prepared again, as is an area prepared by older code; the build then sees new data
+    # and draws every view again.
     steps = (
         ("fetch", fetched, fetch),
         ("prepare", _prepared, prepare),

@@ -1,5 +1,6 @@
 """Stage 2: clip, reproject, merge footprints, attach heights, classify ground."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from rasterio.windows import transform as window_transform
 
 from bengaluru.areas import Area
 from bengaluru.fetch import raw_dir
+from bengaluru.flyovers import flyovers
 from bengaluru.osm import Feature, Route, features_of, load_elements, routes_of
 from bengaluru.plan import load_open_buildings
 
@@ -30,6 +32,7 @@ HEIGHT_PERCENTILE = 75
 METERS_PER_LEVEL = 3.2
 
 ROAD_WIDTHS_M = {
+    "motorway": 14.0,
     "trunk": 14.0,
     "primary": 12.0,
     "secondary": 10.0,
@@ -78,6 +81,15 @@ def metro_path(area: Area) -> Path:
 
 def stats_path(area: Area) -> Path:
     return Path("data/derived") / f"{area.name}_stats.json"
+
+
+def prepare_fingerprint() -> str:
+    """Return a hash of the code that decides the derived data. Data made by other code is
+    out of date, though its downloads have not changed."""
+    digest = hashlib.blake2b(digest_size=8)
+    for name in ("flyovers.py", "osm.py", "plan.py", "prepare.py"):
+        digest.update((Path(__file__).parent / name).read_bytes())
+    return digest.hexdigest()
 
 
 def _patch(area: Area):
@@ -151,6 +163,8 @@ def osm_buildings(features: list[Feature]) -> gpd.GeoDataFrame:
 
 
 def roads(features: list[Feature]) -> gpd.GeoDataFrame:
+    """Return the roads, each with whether it is a bridge and the level it is tagged at,
+    from which the flyovers among them are found."""
     rows, geometries = [], []
     for feature in features:
         highway = feature.tags.get("highway", "").removesuffix("_link")
@@ -160,6 +174,8 @@ def roads(features: list[Feature]) -> gpd.GeoDataFrame:
                     "road_class": highway,
                     "width_m": ROAD_WIDTHS_M[highway],
                     "name": feature.tags.get("name"),
+                    "bridge": feature.tags.get("bridge", "no") != "no",
+                    "layer": _layer(feature.tags),
                 }
             )
             geometries.append(feature.geometry)
@@ -503,6 +519,24 @@ def ground_polygons(area: Area, patch: shapely.Geometry) -> gpd.GeoDataFrame:
     return dissolved[~dissolved.geometry.is_empty]
 
 
+def _with_flyovers(road_lines: gpd.GeoDataFrame, patch) -> tuple[gpd.GeoDataFrame, ...]:
+    """Return the roads, each marked if it is raised, and the flyovers that reach the patch.
+
+    A flyover is drawn as a deck in the air, so its road is not also drawn on the ground.
+    The flyovers are kept whole: cut at the patch's edge, a line would lose its heights.
+    """
+    decks, raised = flyovers(road_lines)
+    marked = road_lines.drop(columns=["bridge", "layer"]).assign(raised=raised)
+    return marked, decks[decks.intersects(patch)]
+
+
+def _write_layers(target: Path, layers: dict[str, gpd.GeoDataFrame]) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.unlink(missing_ok=True)
+    for name, frame in layers.items():
+        frame[~frame.geometry.is_empty].to_file(target, layer=name, driver="GPKG")
+
+
 def prepare(area: Area) -> None:
     raw = raw_dir(area)
     elements = load_elements(raw / "osm.json")
@@ -546,6 +580,7 @@ def prepare(area: Area) -> None:
     buildings = assign_heights(merged, sample_heights(merged, raw / "temporal_height_2023.tif"))
     buildings["area_m2"] = buildings.geometry.area
 
+    road_lines, decks = _with_flyovers(road_lines, patch)
     layers = {
         "patch": gpd.GeoDataFrame({"area": [area.name]}, geometry=[patch], crs=METRIC_CRS),
         "ground": ground_polygons(area, patch),
@@ -560,18 +595,17 @@ def prepare(area: Area) -> None:
         layers["surfaces"] = paved.assign(geometry=paved.geometry.intersection(patch))
     if not tracks.empty:
         layers["rails"] = tracks.assign(geometry=tracks.geometry.intersection(patch))
+    if not decks.empty:
+        layers["flyovers"] = decks
     _write_metro(area, metro(features, routes_of(elements), patch))
 
     target = derived_path(area)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.unlink(missing_ok=True)
-    for name, frame in layers.items():
-        frame[~frame.geometry.is_empty].to_file(target, layer=name, driver="GPKG")
+    _write_layers(target, layers)
 
     areas = candidates.geometry.area.to_numpy()
-    largest = np.sort(areas)[::-1][:5]
     height_counts = buildings["height_source"].value_counts().to_dict()
     stats = {
+        "prepared_by": prepare_fingerprint(),
         "osm_buildings": len(osm),
         "open_buildings_total": len(candidates),
         "open_buildings_overlapping_osm": int(intersects_all.sum()),
@@ -592,9 +626,10 @@ def prepare(area: Area) -> None:
             / 1000,
             1,
         ),
+        "flyover_km": round(float(decks.geometry.intersection(patch).length.sum()) / 1000, 1),
         "open_buildings_kept": len(survivors),
         "open_buildings_under_10m2": int((areas < 10).sum()),
-        "open_buildings_largest_m2": [round(float(value), 1) for value in largest],
+        "open_buildings_largest_m2": [round(float(value), 1) for value in np.sort(areas)[::-1][:5]],
         "buildings_final": len(buildings),
         "height_sources": {str(key): int(value) for key, value in height_counts.items()},
         "height_percentiles_m": {
