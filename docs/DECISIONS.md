@@ -689,3 +689,39 @@ see, which is the bar they are built to.
 Built and seen on the test patch: `out/vidhana-soudha/20261119-081605_night-vidhana-soudha-april.jpg`,
 `…_night-cubbon-park-april.jpg`, and `…_day-cubbon-park-march.jpg`. `bbmp` and
 `central` are drawn again by the night, since the drawing code changed.
+
+## 2026-11-20 — Lights from afar are pooled, not the brightest pixel
+
+The whole city was drawn with its layers on the night of the 19th, and seen from afar at
+night it was wrong. Every block of the built city has a lit window, so keeping the
+brightest pixel through each halving turned the far city into one flat sheet of light,
+and the viewer's dimming of that sheet left a gray haze, not lights.
+
+- **What was tried, on the tiles on disk.** The sheet at full strength: a glow, but
+  the outskirts as bright as the center. The mean: lit windows are 0.3% of a typical
+  tile's pixels and 4% of the densest, so four halvings in they are 8-bit values of 0
+  to 5, and turning those up in the viewer gives bands and no color.
+- **What is built.** Each time the lights halve, a pixel keeps twice the mean of the
+  four it stands for, up to a full light and in its own color (`LIGHTS_KEPT`,
+  `halved_lights` in `tile.py`). A lone window fades by half each halving past the
+  first; a tower or a dense ward stays bright. So from afar the city glows where it is
+  built densest, and the viewer no longer dims anything.
+- **How.** libvips shrinks a pyramid only by the mean or the brightest pixel, so the
+  lights' pyramid is written a level at a time and each level's folder moved into
+  place. The two or three largest levels are read from the frames again; the rest are
+  made in memory, each worked out before the next, since one long chain of halvings
+  overran libvips's stack when it was let go. In a trial at the whole city's size it
+  took about two minutes a view and 2.5 GB of memory.
+- **A build now notices how it is tiled.** The frames are deleted once a view is
+  tiled, so a change to the tiling alone needs them drawn again, and until now the
+  build did not see such a change. What a built view records as its inputs is now the
+  frames' fingerprint and the tiling's (`build_inputs`); the upload reads the same.
+  This change is the first to use it: the night of the 20th draws `bbmp` and `central`
+  again.
+- **His to change:** `LIGHTS_KEPT`. Nearer 1 the far city is darker and only towers
+  show; nearer 4 it fills in toward the sheet. Changing it costs a night.
+
+Seen on the test patch (`out/vidhana-soudha/20261120-071837_night-pooled-lights-far.jpg`),
+and previewed for the whole city from the tiles on disk
+(`out/bbmp/20261120-071837_night-far-lights-pooled-preview.jpg`, beside the two
+it replaces; the preview clips to white where the build keeps the light's color).

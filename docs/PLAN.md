@@ -13,8 +13,10 @@ tell open, being built, and proposed apart, and gained the proposed lines; the v
 went up with a push that morning, and the proposed lines wait for an upload of
 `metro.json`. The same day the map learned the city's hours and seasons: it darkens by
 Bengaluru's clock and lights its windows and street lamps, and its trees flower in their
-months, each with a switch in Settings. That is built on the test patch and committed;
-`bbmp` is drawn again by the night of the 19th, and then waits for an upload and a push.
+months, each with a switch in Settings. `bbmp` and `central` were drawn with both layers
+on the night of the 19th. From afar the night's lights ran together into a haze, so on
+the 20th they were changed to fade with distance and stay bright where the city is dense;
+the night of the 20th draws both areas again, and then they wait for an upload and a push.
 "What looks wrong" below is
 the list still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
