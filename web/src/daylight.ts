@@ -17,11 +17,6 @@ const NIGHT_BELOW_DEG = -6;
 const CLOCK_MS = 60_000;
 // Day or night chosen by hand; nothing kept means the city's clock decides.
 const LIGHT_KEY = "light";
-// Seen from afar, lit windows run together into a sheet, so the lights dim as the map
-// shrinks: by this much each time it halves below the zoom they are whole at, down to a floor.
-const LIGHTS_WHOLE_ZOOM = 0.5;
-const LIGHTS_DIM_PER_HALVING = 0.2;
-const LIGHTS_FLOOR = 0.3;
 const DEGREES = Math.PI / 180;
 
 // How high the sun stands over the city, in degrees; below the horizon it is negative.
@@ -120,9 +115,6 @@ export function startNight(
     }
     lights.viewport.fitBounds(viewer.viewport.getBounds(true), true);
     const zoom = viewer.viewport.viewportToImageZoom(viewer.viewport.getZoom(true));
-    const halvings = Math.max(0, Math.log2(LIGHTS_WHOLE_ZOOM / zoom));
-    const strength = Math.max(LIGHTS_FLOOR, 1 - LIGHTS_DIM_PER_HALVING * halvings);
-    glow.style.opacity = String(dark * strength);
     const shrunk = zoom * devicePixelRatio < 1;
     if (shrunk !== smooth) {
       smooth = shrunk;
@@ -130,7 +122,8 @@ export function startNight(
     }
   }
 
-  // The lights are a second map, drawn over the shade so the night does not dim them.
+  // The lights are a second map, drawn over the shade so the night does not dim them. How
+  // they look from afar is settled where they are tiled, not here.
   function light(): void {
     if (!lightsUrl || dark === 0) {
       lights?.destroy();
@@ -171,6 +164,7 @@ export function startNight(
     const choice = chosen();
     dark = choice === "day" ? 0 : choice === "night" ? 1 : byClock;
     shade.style.opacity = String(dark);
+    glow.style.opacity = String(dark);
     if (clock) {
       clock.textContent = `By Bengaluru's clock: ${nameOfHour(byClock, now)} now`;
     }
