@@ -17,6 +17,10 @@ months, each with a switch in Settings. `bbmp` and `central` were drawn with bot
 on the night of the 19th. From afar the night's lights ran together into a haze, so on
 the 20th they were changed to fade with distance and stay bright where the city is dense;
 the night of the 20th draws both areas again, and then they wait for an upload and a push.
+Also on the 20th, after Pixel Chennai's example, road flyovers were raised onto piers and
+motorways, which had been missing, were drawn; that needs both areas prepared again, which
+the same night does first, so `central` may run into the night of the 21st. A link to the
+site also gained a picture for social media, which goes up with the next push.
 "What looks wrong" below is
 the list still to choose from. Phase 0's frames of the test patch are in `out/vidhana-soudha/`.*
 
@@ -188,7 +192,8 @@ out right. These do not:
 
 1. ~~The metro station is a building on the road, and the metro is not drawn.~~ Fixed
    on 2026-11-17: underground structures are left out, track is drawn on the ground, and
-   viaducts as a deck on piers. Flyovers for roads are still flat on the ground.
+   viaducts as a deck on piers. Flyovers for roads were raised the same way on
+   2026-11-20.
 2. **The landmarks are plain blocks.** Vidhana Soudha has no dome and a blue roof; the
    High Court is cream, not red. Expected until Phase 2, but they are what a resident
    looks for first.

@@ -67,7 +67,8 @@ whenever asked. The reasoning is in `docs/DECISIONS.md`.
 
 mise pins uv, node, and pnpm, and runs each command below as a task: `mise tasks` lists them, and
 `mise run <task> [area]` runs one, for example `mise run detail vidhana-soudha`. The
-areas are `vidhana-soudha` (the test patch), `central`, and `bbmp`.
+areas are `vidhana-soudha` (the test patch), `hebbal` (a second, for flyovers), `central`,
+and `bbmp`.
 
 On this Mac, `out/` is a link to `/Volumes/2021OCT-5TB/Scratch/bengaluru/out` and
 `data/raw/` is a link to `/Volumes/2021OCT-5TB/Scratch/bengaluru/raw`, so renders, tiles,

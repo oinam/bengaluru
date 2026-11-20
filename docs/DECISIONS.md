@@ -220,7 +220,8 @@ look:
   mostly on a viaduct is dropped as the viaduct itself.
 
 The deck's height, width, and colors are first guesses from the palette's existing wall
-and road colors; they are Brajeshwar's to change. Flyovers for roads are still drawn flat.
+and road colors; they are Brajeshwar's to change. Flyovers for roads were still drawn flat;
+see 2026-11-20.
 
 ## 2026-11-17 — The viewer
 
@@ -742,3 +743,56 @@ description but no image, and those sites draw nothing of their own.
 - **His to change:** the place, and how far out (`[lon lat] [halvings]`).
 - A site that has already read the link keeps what it read for days. Facebook,
   LinkedIn, and X each have a page that reads a link again when asked.
+
+## 2026-11-20 — Flyovers stand on piers
+
+Brajeshwar pointed at Pixel Chennai, whose flyovers had just been raised from
+OpenStreetMap's bridge tags, and asked for the same lesson here. Until now only the
+metro's viaducts stood in the air; a road's flyover was painted flat, so Hebbal and
+Richmond Circle were tangles of road on the ground.
+
+- **Which bridges.** A road tagged `bridge` is a flyover if the bridges it joins make a
+  run of 80 m or more (`FLYOVER_MIN_M`). Of the center's 800 runs, 700 are under 60 m
+  and are bridges over drains and tracks, level with their roads; they stay flat. The
+  100 longer runs are 77 km of flyover, and the whole city has 140 km. Footbridges are
+  left flat for now.
+- **How high.** OSM gives a bridge a `layer`, not a height. A deck one level up is 6.5 m
+  to its road, under the metro's 9 m, and each level above adds 5 m, to three levels
+  (`flyovers.py`). So where Hebbal's loops cross, one goes over the other.
+- **Ramps.** The tag starts where the bridge does, so a deck is on the ground at each
+  open end and climbs 1 m in 10 from there. Where bridges meet, as a ramp meets its
+  deck, they meet at height and nothing dips. A run too short to reach its height is
+  a hump.
+- **How it is drawn.** `prepare` writes a `flyovers` layer, each line with its height at
+  every point, and marks those roads `raised` so they are not also drawn on the
+  ground. `detail` cuts each into spans of 24 m, sorted among the buildings as the
+  viaduct's are: the road with its lane line, a parapet on each edge, the side of the
+  deck, and columns, two under a wide deck where they show from the side. A span under
+  3 m of clear height stands on a wall, as a ramp does. Each casts a shadow. A span
+  that crosses over a lower one, the metro's included, is drawn after it. Where two
+  decks overlap at one height, as carriageways side by side do, no parapet stands
+  between them, so they read as one road.
+- **At night** a major flyover has a lamp on its parapet at each span, since the road
+  under it, and its lamps, are no longer drawn.
+- **Motorways** were not drawn at all: the class was missing from the list of roads.
+  The Electronic City and Goraguntepalya flyovers are motorways, and so is NICE Road
+  on the ground: 180 km in the whole city, 40 km of it on bridges. They are now drawn
+  as trunk roads are.
+- **The night notices older data.** A change to how the data is prepared did not make
+  the night prepare it again. The stats now record a fingerprint of the preparing
+  code (`prepare_fingerprint`), and an area prepared by other code is prepared again,
+  and so drawn again.
+- **A second test patch,** `hebbal`: the interchange, three levels of it, and the lake.
+- **His to change:** the heights and the grade (`flyovers.py`), the deck's depth,
+  parapet, span, and columns (`FLYOVER_*` in `detail.py`), and its colors, which are
+  the viaduct's. Each costs a night.
+
+Not done: footbridges and skywalks; decks as narrow as their real lanes, since every
+road here is as wide as its class and a slip road is as wide as its trunk road; and the
+metro's height where it runs over a flyover, which is still 9 m everywhere.
+
+Seen on the new patch by day and by night (`out/hebbal/20261120-102300_flyovers-hebbal-day.jpg`
+and `-night.jpg`, and `20261120-102047_flyovers-hebbal-interchange-2x.png`), and on the
+first (`out/vidhana-soudha/20261120-101319_flyover-shivananda-circle-3x.png`). The whole
+city's roads were run through the finder and the span cutter by day, with nothing drawn:
+277 flyovers, 5,552 spans, 288 of them over a lower one.

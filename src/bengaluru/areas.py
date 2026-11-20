@@ -30,6 +30,11 @@ AREAS = {
     # The Phase 0 test patch: Vidhana Soudha, the High Court, and Cubbon Park, with UB City
     # and the stadiums at its edges. Tall enough that a north-up 2048 px frame is full.
     "vidhana-soudha": Area("vidhana-soudha", 12.965, 77.580, 12.990, 77.605),
+    # A second test patch: the Hebbal interchange, whose flyovers and loops cross at three
+    # levels, with its lake beside it. Cut from the extract the city is cut from.
+    "hebbal": Area(
+        "hebbal", 13.030, 77.578, 13.055, 77.603, osm_extract="asia/india/southern-zone"
+    ),
     # Inside the Outer Ring Road, the Phase 1 map.
     "central": Area(
         "central",
