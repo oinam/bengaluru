@@ -162,7 +162,8 @@ export function startNight(
     const now = new Date();
     const byClock = darkness(sunElevation(now));
     const choice = chosen();
-    dark = choice === "day" ? 0 : choice === "night" ? 1 : byClock;
+    // A map tiled without its lights stays in daylight; a night with nothing lit is only dark.
+    dark = !lightsUrl || choice === "day" ? 0 : choice === "night" ? 1 : byClock;
     shade.style.opacity = String(dark);
     glow.style.opacity = String(dark);
     if (clock) {
@@ -174,6 +175,7 @@ export function startNight(
   // After the map opens or turns, which changes the lights' picture with the map's.
   function refresh(view: View, area: string): void {
     lightsUrl = view.lights ? `${TILE_BASE}pyramid/${view.lights}/${area}.dzi` : null;
+    select.closest("label")?.toggleAttribute("hidden", !lightsUrl);
     update();
   }
 
